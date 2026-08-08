@@ -154,11 +154,11 @@ pip install -r requirements.txt
 
 ### 2. Run Pipeline
 ```bash
-python continuous_trust_simulation/step1_generate_data.py
-python continuous_trust_simulation/step2_extract_features.py
-python continuous_trust_simulation/step3_anomaly_scoring.py
-python continuous_trust_simulation/step4_trust_engine.py
-python continuous_trust_simulation/step5_results.py
+python simulation_results_and_analysis/step1_generate_data.py
+python simulation_results_and_analysis/step2_extract_features.py
+python simulation_results_and_analysis/step3_anomaly_scoring.py
+python simulation_results_and_analysis/step4_trust_engine.py
+python simulation_results_and_analysis/step5_results.py
 ```
 
 ---
