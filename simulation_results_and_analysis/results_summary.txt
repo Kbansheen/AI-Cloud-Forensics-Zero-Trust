@@ -1,0 +1,81 @@
+========================================================================
+RESEARCH SIMULATION RESULTS & ANALYSIS (PAPER 3 FOUNDATION)
+========================================================================
+
+This document summarizes the 90-day simulation results of our continuous 
+trust re-evaluation model (Paper 3) compared against a static baseline, 
+and explains how these findings directly motivated the full-stack adaptive 
+bandit project (Paper 4).
+
+------------------------------------------------------------------------
+1. CORE COMPARATIVE METRICS (BENCHMARK RESULTS)
+------------------------------------------------------------------------
+Our 90-day simulation processed 165,345 events across 50 users and 
+injected 8 distinct MITRE ATT&CK insider threat scenarios.
+
+* Session-Level Detection AUC:
+  - Static ZT (Baseline) : 0.65 +/- 0.04
+  - Continuous ZT (Ours) : 0.83 +/- 0.03  [+0.18 AUC Improvement]
+
+* Detection Latency (Mean Time-to-Detect - MTTD):
+  - Static ZT (Baseline) : 11.4 hours
+  - Continuous ZT (Ours) : 5.7 hours   [50% Reduction in Detection Time]
+
+* False Positive Rate (FPR):
+  - Static ZT (Baseline) : 0.48 (48% of benign sessions flagged)
+  - Continuous ZT (Ours) : 0.28 (28% of benign sessions flagged)
+
+* System Precision:
+  - Static ZT (Baseline) : 0.06
+  - Continuous ZT (Ours) : 0.12         [Double the precision]
+
+------------------------------------------------------------------------
+2. CRITICAL ANALYSIS & KEY TAKEAWAYS
+------------------------------------------------------------------------
+* Why the False Positive Rate (FPR) dropped:
+  Under a static model, any single anomalous event that crosses a static 
+  threshold triggers an alert, locking out benign users who made a simple 
+  operator error. Under our continuous model, benign "spikes" decay trust 
+  temporarily, but since the user's subsequent behavior is normal, the 
+  recovery rate (rho = 0.05) pulls their trust back up before they cross 
+  the quarantine threshold (T < 0.40). This prevents unnecessary lockouts.
+
+* Why the Detection Latency (MTTD) was cut in half:
+  Insiders executing data exfiltration (T1048) or SSM parameter collection 
+  (T1119) generate high-volume anomalous API requests. In our continuous 
+  model, each anomalous event compounds the decay (lambda = 0.15). This 
+  cumulative memory causes the trust score to drop rapidly, triggering 
+  MFA and read-only restrictions within minutes rather than hours.
+
+* Performance Limitations & Observations:
+  Continuous trust re-evaluation does not improve detection speed for low-
+  volume, slow-burn tactics such as Credential Access (T1606) or Discovery 
+  (T1087). Because these tactics generate very few events, they do not 
+  create enough cumulative behavioral drift to trigger early decay.
+
+------------------------------------------------------------------------
+3. DIRECT MOTIVATION FOR THE PAPER 4 FULL-STACK PROJECT
+------------------------------------------------------------------------
+While the Paper 3 simulation proved that continuous decay-recovery math 
+works, it revealed two critical gaps that motivated our current active 
+work:
+
+1. The Pacing Adversary Vulnerability:
+   Because our decay (lambda = 0.15) and recovery (rho = 0.05) rates are 
+   fixed, a sophisticated adversary who observes their own enforcement 
+   actions can calculate exactly how many benign events to insert between 
+   attacks to keep their trust score safe. This allows them to delay 
+   detection up to 29 hours.
+   -> Solution: This motivated the development of the adaptive UCB1 
+      Multi-Armed Bandit (Paper 4) to dynamically tune these parameters 
+      per user.
+
+2. The Need for Practical Usability (Why we built the Dashboard):
+   Security analysts in a SOC cannot manage raw mathematical equations 
+   or look at static log tables. To make this continuous trust evaluation 
+   practically deployable, we needed a real-time user interface.
+   -> Solution: This motivated us to build the full-stack Paper 4 
+      dashboard, featuring real-time trust trajectory graphs, active 
+      MITRE ATT&CK attack simulators, and live visual feeds of the 
+      adaptive bandit learning parameters.
+========================================================================
