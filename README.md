@@ -26,7 +26,7 @@ This codebase links together the following three research papers:
 * **Co-Author**: Sumit Kumar (The NorthCap University)
 * **Contribution**: Implements a bounded, per-event recursive trust update rule to replace static sessions. An unsupervised Isolation Forest scores incoming logs to drive trust decay and recovery, triggering graded enforcement (MFA, Read-Only, or Quarantine) based on the current score.
 
-### 3. Adaptive Bandit Parameter Learning (Paper 4 — In Preparation)
+### 3. Adaptive Bandit Parameter Learning 
 * **Title**: *Adaptive Trust Parameter Learning Against Evasive Insider Threats in Zero Trust Cloud Environments*
 * **Venue**: In preparation
 * **Co-Author**: Sumit Kumar (The NorthCap University)

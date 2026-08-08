@@ -5,7 +5,7 @@ RESEARCH SIMULATION RESULTS & ANALYSIS (PAPER 3 FOUNDATION)
 This document summarizes the 90-day simulation results of our continuous 
 trust re-evaluation model (Paper 3) compared against a static baseline, 
 and explains how these findings directly motivated the full-stack adaptive 
-bandit project (Paper 4).
+bandit project (Dashboard Project).
 
 ------------------------------------------------------------------------
 1. CORE COMPARATIVE METRICS (BENCHMARK RESULTS)
@@ -67,14 +67,14 @@ work:
    attacks to keep their trust score safe. This allows them to delay 
    detection up to 29 hours.
    -> Solution: This motivated the development of the adaptive UCB1 
-      Multi-Armed Bandit (Paper 4) to dynamically tune these parameters 
+      Multi-Armed Bandit (Dashboard Project) to dynamically tune these parameters 
       per user.
 
 2. The Need for Practical Usability (Why we built the Dashboard):
    Security analysts in a SOC cannot manage raw mathematical equations 
    or look at static log tables. To make this continuous trust evaluation 
    practically deployable, we needed a real-time user interface.
-   -> Solution: This motivated us to build the full-stack Paper 4 
+   -> Solution: This motivated us to build the full-stack Adaptive Trust Dashboard Project 
       dashboard, featuring real-time trust trajectory graphs, active 
       MITRE ATT&CK attack simulators, and live visual feeds of the 
       adaptive bandit learning parameters.
