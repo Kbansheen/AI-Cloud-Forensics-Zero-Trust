@@ -1,0 +1,21 @@
+# Large data and feature matrices (features.npy is 355.8MB and exceeds GitHub's 100MB single-file limit)
+features.npy
+cloudtrail_logs.csv
+anomaly_scores.npy
+
+# Generated simulation results
+results_static.csv
+results_continuous.csv
+mttd_static.csv
+mttd_continuous.csv
+results_summary.txt
+
+# Python caching
+__pycache__/
+*.pyc
+
+# IDEs and OS metadata
+.ipynb_checkpoints/
+.DS_Store
+.vscode/
+.idea/
