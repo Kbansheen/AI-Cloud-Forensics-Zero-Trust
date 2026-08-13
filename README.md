@@ -108,19 +108,11 @@ Although the Autoencoder achieved the highest raw validation AUC (0.94 vs 0.92 f
 * **The Decay-Recovery Dynamic**: A single anomalous event immediately decays trust. In contrast, normal behavior recovers trust, but it does so **deliberately more slowly**, ensuring that the system's memory of suspicious actions persists through "cover" behavior.
 
 ### 4. Graded Enforcement Policy Mapping
-Instead of binary block/allow decisions, the scalar trust score drives real-time, risk-adaptive session constraints:
-
-```mermaid
-graph TD
-    T1["Trust Score T_u >= 0.80\n[ Normal Access ]\nNo restrictions; standard operations."]
-    T2["0.60 <= T_u < 0.80\n[ Step-up MFA ]\nRequires secondary authentication."]
-    T3["0.40 <= T_u < 0.60\n[ Read-Only Privilege ]\nStrips write/modify permissions."]
-    T4["T_u < 0.40\n[ Session Quarantine ]\nImmediate credentials revocation & admin alert."]
-
-    T1 -->|Behavioral Decay| T2
-    T2 -->|Sustained Drift| T3
-    T3 -->|Critical Drop| T4
-```
+Instead of binary block/allow decisions, the scalar trust score $T_u$ drives risk-adaptive session constraints:
+* **$T_u \ge 0.80$ [Normal Access]**: Unrestricted access; standard baseline behavior concentrates here.
+* **$0.60 \le T_u < 0.80$ [Step-up MFA]**: Requires secondary authentication for minor anomalies.
+* **$0.40 \le T_u < 0.60$ [Read-Only]**: Strips write/modify permissions to restrict lateral capabilities.
+* **$T_u < 0.40$ [Quarantine]**: Immediate session revocation and automated alert dispatch.
 
 ---
 
