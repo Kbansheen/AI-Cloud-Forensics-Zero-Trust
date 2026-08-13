@@ -120,6 +120,9 @@ Instead of binary block/allow decisions, the scalar trust score $T_u$ drives ris
 
 The codebase is organized into clean, logical research and engineering boundaries:
 
+<details>
+<summary><strong>Click to expand the repository directory structure</strong></summary>
+
 ```directory
 AI-Cloud-Forensics-Zero-Trust/
 ├── .gitignore                      # Excludes large generated datasets from GitHub
@@ -148,6 +151,8 @@ AI-Cloud-Forensics-Zero-Trust/
         ├── backend/                # Place your FastAPI files here!
         └── frontend/               # Place your React/Streamlit files here!
 ```
+
+</details>
 
 ---
 
