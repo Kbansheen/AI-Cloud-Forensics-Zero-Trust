@@ -6,10 +6,6 @@
 
 Behavioral Analytics · Continuous Re-Authentication · Multi-Armed Bandits · Incident Response
 
-[![IEEE Xplore](https://img.shields.io/badge/IEEE-Xplore-blue.svg)](https://doi.org/10.1109/ISCS69371.2025.11386291)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
 </div>
 
 ---
@@ -24,7 +20,7 @@ Rather than treating cloud security as a set of disconnected tools, this reposit
 
 | Phase | Research Focus | Practical Contribution |
 |:---|:---|:---|
-| **Phase 1: Conceptual Blueprint** | Foundational review of AI and Zero Trust integration in cloud forensics. | Identified the "static trust" gap and mapped out the initial AIZT-CFIR design. |
+| **Phase 1: Conceptual Blueprint** <br/> [📄 Published Paper](https://doi.org/10.1109/ISCS69371.2025.11386291) | Foundational review of AI and Zero Trust integration in cloud forensics. | Identified the "static trust" gap and mapped out the initial AIZT-CFIR design. |
 | **Phase 2: Mathematical Engine** | Continuous trust re-evaluation via event-driven decay-recovery modeling. | Code for a reproducible 90-day simulation of 165k events with unsupervised scoring. |
 | **Phase 3: Active Defense** | Mitigating evasive pacing threats using reinforcement learning parameter tuning. | Ongoing full-stack monitoring dashboard with a per-user UCB1 bandit. |
 
@@ -39,7 +35,7 @@ Modern cloud control planes authorize credentials at the moment of login. Once a
 Whether an identity is a legitimate compromised user or a rogue service role, an attacker inside the control plane can slowly and deliberately drift away from normal behavior—exfiltrating data or escalating privileges—while staying completely below traditional rate-limiting or spike-based detection thresholds. 
 
 ### Identifying the Gaps
-Our foundational review of cloud forensics (published in **IEEE ISCS 2025**) established that existing frameworks are highly reactive and fail to maintain forensic integrity in transient, multi-tenant cloud planes. This literature review proposed the conceptual **AI-driven Zero Trust Cloud Forensics and Incident Response (AIZT-CFIR)** framework, establishing that real-time, continuous re-verification is the only mathematically sound way to secure cloud environments against behavioral drift.
+Our foundational review of cloud forensics established that existing frameworks are highly reactive and fail to maintain forensic integrity in transient, multi-tenant cloud planes. This literature review proposed the conceptual **AI-driven Zero Trust Cloud Forensics and Incident Response (AIZT-CFIR)** framework, establishing that real-time, continuous re-verification is the only mathematically sound way to secure cloud environments against behavioral drift.
 
 ### Our Proposed Solution
 To bridge this gap, we operationalized the AIZT-CFIR framework. Every cloud control-plane event dynamically updates a bounded, scalar trust score $T_u \in [0, 1]$. If a user's behavior looks suspicious, their trust score decays proportionally to the anomaly severity, triggering **graded enforcement actions** (such as step-up MFA, read-only session restrictions, or total account quarantine) in real time.
@@ -102,20 +98,29 @@ Although the Autoencoder achieved the highest raw validation AUC (0.94 vs 0.92 f
 2. **Interpretability**: The Isolation Forest's path-length calculations allow a security analyst to easily extract and interpret the shortest isolation paths, providing immediate context (e.g., that an alert was triggered by an unusual `iam:PassRole` API call).
 
 ### 3. Mathematically Bounded Trust Updates
-For any user $u$ at event step $t$, the continuous trust score $T_u(t) \in [0, 1]$ is recursively updated using a bounded decay-recovery rule:
 
-$$T_u(t+1) = \text{clamp}_{[0, 1]} \left[ T_u(t) - \lambda s_u(t) + \rho (1 - s_u(t)) (1 - T_u(t)) \right]$$
+> [!NOTE]
+> **Continuous Trust Update Equation (Equation 1):**
+> $$T_u(t+1) = \text{clamp}_{[0, 1]} \left[ T_u(t) - \lambda s_u(t) + \rho (1 - s_u(t)) (1 - T_u(t)) \right]$$
 
-* **Parameters**: Baseline decay rate $\lambda = 0.15$; baseline recovery rate $\rho = 0.05$.
+* **Parameters**: Baseline decay rate $\lambda = 0.15$; recovery rate $\rho = 0.05$.
 * **Properties**: Since $\lambda, \rho > 0$ and $\lambda + \rho < 1$, the trust score is mathematically guaranteed to stay stable and bounded in $[0, 1]$ at all times. 
 * **The Decay-Recovery Dynamic**: A single anomalous event immediately decays trust. In contrast, normal behavior recovers trust, but it does so **deliberately more slowly**, ensuring that the system's memory of suspicious actions persists through "cover" behavior.
 
 ### 4. Graded Enforcement Policy Mapping
 Instead of binary block/allow decisions, the scalar trust score drives real-time, risk-adaptive session constraints:
-* **$T_u \ge 0.80$**: **Normal Access** (Benign activity is tightly concentrated here).
-* **$0.60 \le T_u < 0.80$**: **Step-up MFA** (Triggers additional multi-factor challenges for minor anomalies).
-* **$0.40 \le T_u < 0.60$**: **Read-Only Privilege** (Strips permission to write or modify cloud resources).
-* **$T_u < 0.40$**: **Session Quarantine** (Revokes active credentials immediately and alerts SOC analysts).
+
+```mermaid
+graph TD
+    T1["Trust Score T_u >= 0.80\n[ Normal Access ]\nNo restrictions; standard operations."]
+    T2["0.60 <= T_u < 0.80\n[ Step-up MFA ]\nRequires secondary authentication."]
+    T3["0.40 <= T_u < 0.60\n[ Read-Only Privilege ]\nStrips write/modify permissions."]
+    T4["T_u < 0.40\n[ Session Quarantine ]\nImmediate credentials revocation & admin alert."]
+
+    T1 -->|Behavioral Decay| T2
+    T2 -->|Sustained Drift| T3
+    T3 -->|Critical Drop| T4
+```
 
 ---
 
@@ -148,8 +153,8 @@ AI-Cloud-Forensics-Zero-Trust/
     │   ├── bandit_learner.py       # Multi-armed UCB1 bandit parameter tuner
     │   └── pacing_adversary.py     # Simulation logic for the evasive adversary
     └── dashboard/
-        ├── backend/                # FastAPI backend & WebSocket server
-        └── frontend/               # Interactive React / Streamlit UI
+        ├── backend/                # Place your FastAPI files here!
+        └── frontend/               # Place your React/Streamlit files here!
 ```
 
 ---
@@ -172,12 +177,32 @@ Running this pipeline produces the following comparative metrics against an othe
 | No-recovery | 0.15 | 0.00 | 0.52 ± 0.00 | 0.05 | 0.95 |
 | Aggressive | 0.25 | 0.10 | 0.80 ± 0.03 | 0.10 | 0.34 |
 
-### Automatically Generated Research Figures
-Running `python simulation_results_and_analysis/step5_results.py` automatically plots and exports the following figures:
+---
 
-1. **`fig_main_results.png`**: ROC curves, trust trajectories during active attacks, and volatility boxplots showing that malicious users exhibit significantly higher trust volatility ($V_u$).
-2. **`fig_trust_distribution.png`**: Dense histogram showing clear separation—benign events concentrate heavily above $T_u = 0.80$, while malicious events are successfully forced into the restricted and quarantine zones.
-3. **`fig_mttd.png`**: Detection latency comparison across all 8 MITRE ATT&CK scenarios (Privilege Escalation, Lateral Movement, Collection, etc.).
+## 🎨 Generated Figures & Visual Analysis
+
+Running `simulation_results_and_analysis/step5_results.py` automatically generates and exports the following high-resolution plots inside the `simulation_results_and_analysis/` folder:
+
+### 1. `fig_main_results.png`
+ROC curves, trust trajectories during active attacks, and volatility boxplots showing that malicious users exhibit significantly higher trust volatility ($V_u$).
+
+<p align="center">
+  <img src="simulation_results_and_analysis/fig_main_results.png" alt="ROC & Trajectory Results" width="850"/>
+</p>
+
+### 2. `fig_trust_distribution.png`
+Dense histogram showing clear separation—benign events concentrate heavily above $T_u = 0.80$, while malicious events are successfully forced into the restricted and quarantine zones.
+
+<p align="center">
+  <img src="simulation_results_and_analysis/fig_trust_distribution.png" alt="Trust Scores Density Distribution" width="700"/>
+</p>
+
+### 3. `fig_mttd.png`
+Detection latency comparison across all 8 MITRE ATT&CK scenarios (Privilege Escalation, Lateral Movement, Collection, etc.).
+
+<p align="center">
+  <img src="simulation_results_and_analysis/fig_mttd.png" alt="MTTD Comparison by Scenario" width="850"/>
+</p>
 
 ---
 
@@ -221,9 +246,16 @@ python simulation_results_and_analysis/step5_results.py
 
 ---
 
-## 📝 Citations & Publications
+## 🔬 Research Publications & Citation
 
-If you use this codebase or refer to our work, please cite our papers:
+This repository contains the practical implementation associated with my peer-reviewed, published research:
+
+> Kaur, B., & Gupta, S. (2025).  
+> *Integrating Artificial Intelligence and Zero Trust Principles in Cloud Forensics and Incident Response: A Comprehensive Review.*  
+> **Proceedings of ISCS 2025** (The NorthCap University, IEEE Delhi Section), IEEE Xplore.  
+> 🔗 **DOI:** [10.1109/ISCS69371.2025.11386291](https://doi.org/10.1109/ISCS69371.2025.11386291)
+
+If you build upon this work, please cite our paper:
 
 ```bibtex
 @inproceedings{kaur2025integrating,
@@ -233,13 +265,6 @@ If you use this codebase or refer to our work, please cite our papers:
   publisher={IEEE},
   doi={10.1109/ISCS69371.2025.11386291},
   year={2025}
-}
-
-@article{kaur2026continuous,
-  title={Continuous Trust Re-Evaluation Using Behavioral Drift Modelling in Zero Trust Cloud Environments},
-  author={Kaur, Bansheen and Kumar, Sumit},
-  journal={Submitted to ISAC 2026 (Under Review)},
-  year={2026}
 }
 ```
 
