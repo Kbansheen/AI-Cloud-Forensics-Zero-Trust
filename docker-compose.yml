@@ -1,0 +1,64 @@
+version: "3.9"
+
+services:
+
+  # ─── ZT Trust Engine backend ───────────────────────────────────────────────
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── React dashboard ────────────────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ─── Optional: Redpanda (Kafka-compatible) for production event streaming ──
+  # Uncomment when scaling beyond standalone demo mode
+  #
+  # redpanda:
+  #   image: redpandadata/redpanda:latest
+  #   ports:
+  #     - "9092:9092"
+  #     - "9644:9644"
+  #   command:
+  #     - redpanda
+  #     - start
+  #     - --smp 1
+  #     - --memory 512M
+  #     - --overprovisioned
+  #     - --kafka-addr PLAINTEXT://0.0.0.0:9092
+  #     - --advertise-kafka-addr PLAINTEXT://redpanda:9092
+
+  # ─── Optional: PostgreSQL for persisted trust history ───────────────────────
+  # postgres:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_DB: zt_trust
+  #     POSTGRES_USER: zt
+  #     POSTGRES_PASSWORD: zt_secret
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+
+  # ─── Optional: Redis for trust-state cache ──────────────────────────────────
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+
+# volumes:
+#   pgdata:

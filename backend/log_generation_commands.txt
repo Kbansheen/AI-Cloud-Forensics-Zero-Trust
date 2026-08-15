@@ -1,0 +1,58 @@
+ZT Trust Engine - AWS CloudTrail Log Generation Commands
+=========================================================
+
+AWS Account: 862319296373
+Region: us-east-1
+Rounds per session: 20
+Commands per round: 10
+
+IAM Users and Policies:
+  developer      - AmazonEC2ReadOnlyAccess, AWSCodeCommitReadOnly, AWSLambda_ReadOnlyAccess, CloudWatchReadOnlyAccess, AmazonSSMReadOnlyAccess
+  data-analyst   - AmazonS3ReadOnlyAccess, AmazonAthenaFullAccess, AWSGlueConsoleFullAccess, CloudWatchReadOnlyAccess, AmazonRedshiftReadOnlyAccess
+  security-admin - IAMReadOnlyAccess, AWSCloudTrail_ReadOnlyAccess, AmazonGuardDutyReadOnlyAccess, SecurityAudit, CloudWatchReadOnlyAccess
+  devops         - AmazonEC2ReadOnlyAccess, AWSCloudFormationReadOnlyAccess, AmazonSSMReadOnlyAccess, CloudWatchReadOnlyAccess, AmazonS3ReadOnlyAccess, IAMReadOnlyAccess
+  finance        - AmazonS3ReadOnlyAccess, AWSBudgetsReadOnlyAccess, CloudWatchReadOnlyAccess, AmazonEC2ReadOnlyAccess
+  hr             - AmazonS3ReadOnlyAccess, IAMReadOnlyAccess, CloudWatchReadOnlyAccess
+  executive      - AmazonS3ReadOnlyAccess, CloudWatchReadOnlyAccess, AWSBudgetsReadOnlyAccess, AmazonEC2ReadOnlyAccess
+
+Run daily in PowerShell for each user profile.
+Paste each one-liner below directly into PowerShell and press Enter.
+Each user takes about 5-6 minutes to complete.
+
+=========================================================
+ONE-LINER COMMANDS (paste directly into PowerShell)
+=========================================================
+
+DEVELOPER:
+for ($i = 1; $i -le 20; $i++) { Write-Host "developer round $i/20"; aws ec2 describe-instances --profile developer 2>&1 | Out-Null; aws ec2 describe-security-groups --profile developer 2>&1 | Out-Null; aws ec2 describe-vpcs --profile developer 2>&1 | Out-Null; aws lambda list-functions --profile developer 2>&1 | Out-Null; aws cloudwatch list-metrics --profile developer 2>&1 | Out-Null; aws cloudwatch describe-alarms --profile developer 2>&1 | Out-Null; aws ssm describe-parameters --profile developer 2>&1 | Out-Null; aws ec2 describe-key-pairs --profile developer 2>&1 | Out-Null; aws ec2 describe-subnets --profile developer 2>&1 | Out-Null; aws ec2 describe-regions --profile developer 2>&1 | Out-Null; Start-Sleep -Seconds 1 }; Write-Host "developer done." -ForegroundColor Green
+
+DATA-ANALYST:
+for ($i = 1; $i -le 20; $i++) { Write-Host "data-analyst round $i/20"; aws s3 ls --profile data-analyst 2>&1 | Out-Null; aws s3api list-buckets --profile data-analyst 2>&1 | Out-Null; aws athena list-query-executions --profile data-analyst 2>&1 | Out-Null; aws athena list-work-groups --profile data-analyst 2>&1 | Out-Null; aws glue get-databases --profile data-analyst 2>&1 | Out-Null; aws glue list-jobs --profile data-analyst 2>&1 | Out-Null; aws cloudwatch list-metrics --profile data-analyst 2>&1 | Out-Null; aws cloudwatch describe-alarms --profile data-analyst 2>&1 | Out-Null; aws redshift describe-clusters --profile data-analyst 2>&1 | Out-Null; aws s3api list-buckets --profile data-analyst 2>&1 | Out-Null; Start-Sleep -Seconds 1 }; Write-Host "data-analyst done." -ForegroundColor Green
+
+SECURITY-ADMIN:
+for ($i = 1; $i -le 20; $i++) { Write-Host "security-admin round $i/20"; aws iam list-users --profile security-admin 2>&1 | Out-Null; aws iam list-roles --profile security-admin 2>&1 | Out-Null; aws iam list-policies --profile security-admin 2>&1 | Out-Null; aws iam get-account-summary --profile security-admin 2>&1 | Out-Null; aws cloudtrail describe-trails --profile security-admin 2>&1 | Out-Null; aws cloudtrail list-trails --profile security-admin 2>&1 | Out-Null; aws guardduty list-detectors --profile security-admin 2>&1 | Out-Null; aws cloudwatch list-metrics --profile security-admin 2>&1 | Out-Null; aws iam list-groups --profile security-admin 2>&1 | Out-Null; aws sts get-caller-identity --profile security-admin 2>&1 | Out-Null; Start-Sleep -Seconds 1 }; Write-Host "security-admin done." -ForegroundColor Green
+
+DEVOPS:
+for ($i = 1; $i -le 20; $i++) { Write-Host "devops round $i/20"; aws ec2 describe-instances --profile devops 2>&1 | Out-Null; aws ec2 describe-security-groups --profile devops 2>&1 | Out-Null; aws cloudformation list-stacks --profile devops 2>&1 | Out-Null; aws cloudformation describe-stacks --profile devops 2>&1 | Out-Null; aws ssm describe-parameters --profile devops 2>&1 | Out-Null; aws ssm list-documents --profile devops 2>&1 | Out-Null; aws cloudwatch list-metrics --profile devops 2>&1 | Out-Null; aws cloudwatch describe-alarms --profile devops 2>&1 | Out-Null; aws ec2 describe-vpcs --profile devops 2>&1 | Out-Null; aws s3 ls --profile devops 2>&1 | Out-Null; Start-Sleep -Seconds 1 }; Write-Host "devops done." -ForegroundColor Green
+
+FINANCE:
+for ($i = 1; $i -le 20; $i++) { Write-Host "finance round $i/20"; aws s3 ls --profile finance 2>&1 | Out-Null; aws s3api list-buckets --profile finance 2>&1 | Out-Null; aws budgets describe-budgets --account-id 862319296373 --profile finance 2>&1 | Out-Null; aws cloudwatch list-metrics --profile finance 2>&1 | Out-Null; aws cloudwatch describe-alarms --profile finance 2>&1 | Out-Null; aws ec2 describe-instances --profile finance 2>&1 | Out-Null; aws ec2 describe-regions --profile finance 2>&1 | Out-Null; aws s3api list-buckets --profile finance 2>&1 | Out-Null; aws sts get-caller-identity --profile finance 2>&1 | Out-Null; aws cloudwatch list-dashboards --profile finance 2>&1 | Out-Null; Start-Sleep -Seconds 1 }; Write-Host "finance done." -ForegroundColor Green
+
+HR:
+for ($i = 1; $i -le 20; $i++) { Write-Host "hr round $i/20"; aws s3 ls --profile hr 2>&1 | Out-Null; aws s3api list-buckets --profile hr 2>&1 | Out-Null; aws iam list-users --profile hr 2>&1 | Out-Null; aws iam list-groups --profile hr 2>&1 | Out-Null; aws cloudwatch list-metrics --profile hr 2>&1 | Out-Null; aws cloudwatch describe-alarms --profile hr 2>&1 | Out-Null; aws iam get-account-summary --profile hr 2>&1 | Out-Null; aws sts get-caller-identity --profile hr 2>&1 | Out-Null; aws s3api list-buckets --profile hr 2>&1 | Out-Null; aws iam list-roles --profile hr 2>&1 | Out-Null; Start-Sleep -Seconds 1 }; Write-Host "hr done." -ForegroundColor Green
+
+EXECUTIVE:
+for ($i = 1; $i -le 20; $i++) { Write-Host "executive round $i/20"; aws s3 ls --profile executive 2>&1 | Out-Null; aws s3api list-buckets --profile executive 2>&1 | Out-Null; aws cloudwatch list-metrics --profile executive 2>&1 | Out-Null; aws cloudwatch describe-alarms --profile executive 2>&1 | Out-Null; aws cloudwatch list-dashboards --profile executive 2>&1 | Out-Null; aws ec2 describe-instances --profile executive 2>&1 | Out-Null; aws ec2 describe-regions --profile executive 2>&1 | Out-Null; aws budgets describe-budgets --account-id 862319296373 --profile executive 2>&1 | Out-Null; aws sts get-caller-identity --profile executive 2>&1 | Out-Null; aws s3api list-buckets --profile executive 2>&1 | Out-Null; Start-Sleep -Seconds 1 }; Write-Host "executive done." -ForegroundColor Green
+
+=========================================================
+AFTER ALL USERS COMPLETE
+=========================================================
+
+Wait 15 minutes then run in AWS CloudShell:
+
+aws s3 sync s3://aws-cloudtrail-logs-862319296373-56958450/AWSLogs/862319296373/CloudTrail/us-east-1/2026/$(date +%m)/$(date +%d)/ /tmp/newlogs/
+mkdir -p /tmp/flat && find /tmp/newlogs/ -name "*.json.gz" -exec cp {} /tmp/flat/ \;
+cd /tmp && zip newlogs.zip flat/*.json.gz
+
+Then download newlogs.zip from CloudShell Actions menu.
+Extract and add all .json.gz files to backend/real_logs/ folder.
