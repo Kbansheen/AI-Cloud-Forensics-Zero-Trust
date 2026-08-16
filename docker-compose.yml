@@ -4,7 +4,7 @@ services:
 
   # ─── ZT Trust Engine backend ───────────────────────────────────────────────
   backend:
-    build: ./backend
+    build: ./adaptive_trust_dashboard/dashboard/backend
     ports:
       - "8000:8000"
     environment:
@@ -18,7 +18,7 @@ services:
 
   # ─── React dashboard ────────────────────────────────────────────────────────
   frontend:
-    build: ./frontend
+    build: ./adaptive_trust_dashboard/dashboard/frontend
     ports:
       - "3000:80"
     depends_on:
