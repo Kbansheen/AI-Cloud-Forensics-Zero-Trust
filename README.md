@@ -129,8 +129,9 @@ AI-Cloud-Forensics-Zero-Trust/
 ├── LICENSE                         # Official MIT License
 ├── README.md                       # Master documentation (you are reading this)
 ├── requirements.txt                # Unified python libraries
+├── docker-compose.yml              # Local container deployment configurations
 │
-├── simulation_results_and_analysis/ # 📊 THE OFFLINE SIMULATION SUITE
+├── simulation_results_and_analysis/ # 📊 THE OFFLINE SIMULATION SUITE (PAPER 3 FOUNDATION)
 │   ├── step1_generate_data.py      # Role-based CloudTrail log generator
 │   ├── step2_extract_features.py   # 538-dimensional sparse vectorizer
 │   ├── step3_anomaly_scoring.py    # Unsupervised Isolation Forest training & calibration
@@ -144,12 +145,33 @@ AI-Cloud-Forensics-Zero-Trust/
 │
 └── adaptive_trust_dashboard/        # ⚡ ACTIVE FULL-STACK ENGINEERING DASHBOARD PROJECT
     ├── README.md                    # Dedicated dashboard guide
-    ├── core/
-    │   ├── bandit_learner.py       # Multi-armed UCB1 bandit parameter tuner
-    │   └── pacing_adversary.py     # Simulation logic for the evasive adversary
     └── dashboard/
-        ├── backend/                # Place your FastAPI files here!
-        └── frontend/               # Place your React/Streamlit files here!
+        ├── backend/                # Python/FastAPI Backend & Simulation
+        │   ├── real_logs/          # Raw AWS CloudTrail JSON samples
+        │   ├── main.py             # FastAPI web server entry point
+        │   ├── simulator.py        # Main simulation engine
+        │   ├── trust_engine.py     # Continuous decay-recovery scoring
+        │   ├── adaptive_params.py  # UCB1 multi-armed bandit tuning
+        │   ├── adversary.py        # Pacing adversary simulation logic
+        │   ├── anomaly_scorer.py   # Isolation Forest scoring
+        │   ├── feature_encoder.py  # 538-dimensional feature encoder
+        │   ├── cloudtrail_loader.py # CloudTrail log parser & loader
+        │   ├── comparison.py       # Benchmark comparison logic
+        │   ├── real_baseline_generator.py # User profile baseline generator
+        │   ├── Dockerfile          # Container build config
+        │   ├── requirements.txt    # Python backend dependencies
+        │   ├── status.json         # Dashboard cache status
+        │   └── log_generation_commands.txt # Execution command log
+        │
+        └── frontend/               # Interactive React Frontend UI
+            ├── src/                # React components (charts, grids, simulations)
+            │   ├── App.jsx         # UI entrance
+            │   ├── main.jsx        # Render entrance
+            │   └── components/     # Visual widgets
+            ├── Dockerfile          # Frontend container build config
+            ├── nginx.conf          # Nginx web server routing config
+            ├── package.json        # Frontend package manifest
+            └── vite.config.js      # Vite bundler configurations
 ```
 
 </details>
