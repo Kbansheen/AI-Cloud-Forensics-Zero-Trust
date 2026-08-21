@@ -13,6 +13,7 @@ Real AWS CloudTrail Integration:
 
 import asyncio
 import os
+import random
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -63,6 +64,7 @@ class AppState:
         self.scenario_detect: dict = {}
         self.comparison_results: Optional[dict] = None
         self.comparison_running: bool = False
+        self.comparison_log:  list[dict] = []
         self.real_log_count:  int  = 0
 
 state = AppState()
@@ -107,10 +109,20 @@ def _is_valid_real_event(ev: dict) -> bool:
     return True
 
 
+MAX_REAL_EVENTS_PER_ROLE = 3000
+# Caps any single role's real-log contribution to the training baseline.
+# Without this, devops (~17.5k real events from frequent CloudWatch API
+# calls) dominates its own Isolation Forest's calibration relative to
+# other roles (~1.4k-3.6k events), leaving its baseline ~97% real-log vs
+# ~65-75% for other roles. This caused systematic false quarantines for
+# devops users with no injected attack (diagnosed via user_003, user_007).
+
+
 def _load_real_logs_per_role(real_logs_path: str) -> dict[str, list[dict]]:
     """
     Load real CloudTrail logs and group by IAM username.
-    Returns dict: role_name → list of events for that role.
+    Returns dict: role_name → list of events for that role,
+    capped at MAX_REAL_EVENTS_PER_ROLE for balanced baseline composition.
     """
     all_events  = load_cloudtrail_directory(real_logs_path)
     valid_events = [e for e in all_events if _is_valid_real_event(e)]
@@ -127,9 +139,17 @@ def _load_real_logs_per_role(real_logs_path: str) -> dict[str, list[dict]]:
     by_role: dict[str, list[dict]] = {}
     for role, iam_user in ROLE_TO_IAM.items():
         if iam_user in by_iam_user:
-            by_role[role] = by_iam_user[iam_user]
-            print(f"[REAL LOGS] {role:15s} → IAM user '{iam_user}': "
-                  f"{len(by_role[role])} events")
+            role_events = by_iam_user[iam_user]
+            if len(role_events) > MAX_REAL_EVENTS_PER_ROLE:
+                rng = random.Random(42)
+                role_events = rng.sample(role_events, MAX_REAL_EVENTS_PER_ROLE)
+                print(f"[REAL LOGS] {role:15s} → IAM user '{iam_user}': "
+                      f"{len(by_iam_user[iam_user])} collected, "
+                      f"capped to {MAX_REAL_EVENTS_PER_ROLE}")
+            else:
+                print(f"[REAL LOGS] {role:15s} → IAM user '{iam_user}': "
+                      f"{len(role_events)} events")
+            by_role[role] = role_events
         else:
             print(f"[REAL LOGS] {role:15s} → no real logs found, will use synthetic")
 
@@ -466,15 +486,29 @@ async def run_comparison_api(background_tasks: BackgroundTasks):
     if state.comparison_running:
         raise HTTPException(400, "Comparison already running")
     state.comparison_running = True
+    state.comparison_log     = []
     background_tasks.add_task(_comparison_bg)
     return {"ok": True, "message": "Running 3-condition comparison — watch /ws"}
 
 
 async def _comparison_bg():
+    loop = asyncio.get_event_loop()
+
+    def on_progress(message: str):
+        # Called from the worker thread (run_in_executor), so the
+        # broadcast coroutine must be scheduled onto the main event
+        # loop thread-safely rather than awaited directly here.
+        entry = {"time": datetime.utcnow().strftime("%H:%M:%S"), "message": message}
+        state.comparison_log.append(entry)
+        asyncio.run_coroutine_threadsafe(
+            broadcast({"type": "comparison_progress", "entry": entry}),
+            loop,
+        )
+
     try:
-        loop   = asyncio.get_event_loop()
         result = await loop.run_in_executor(
-            None, lambda: run_comparison(n_users=20, days=30, seed=42)
+            None,
+            lambda: run_comparison(n_users=20, days=30, seed=42, on_progress=on_progress),
         )
         state.comparison_results = result
         await broadcast({"type": "comparison_done", "summary": result["summary"]})
@@ -487,6 +521,14 @@ def get_comparison():
     if not state.comparison_results:
         raise HTTPException(404, "No comparison results yet")
     return state.comparison_results
+
+
+@app.get("/api/comparison/log")
+def get_comparison_log():
+    """Full progress log for the current/most recent comparison run.
+    Lets a freshly-loaded or reconnected frontend catch up on progress
+    instead of relying solely on the live websocket stream."""
+    return {"log": state.comparison_log, "running": state.comparison_running}
 
 
 # ── WebSocket ─────────────────────────────────────────────────────────────────

@@ -19,7 +19,7 @@ Results are statistically equivalent to the full 50-user/90-day run.
 import numpy as np
 from simulator import CloudTrailSimulator, MITRE_SCENARIOS
 from anomaly_scorer import AnomalyScorer
-from feature_encoder import get_user_id
+from feature_encoder import get_user_id, get_action
 from cloudtrail_loader import load_cloudtrail_records
 from trust_engine import TrustEngineManager
 from adaptive_params import UCBParamLearner, compute_reward
@@ -39,7 +39,8 @@ SCENARIO_LABELS = {
 
 
 def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
-             days: int = 30, seed: int = 42) -> dict:
+             days: int = 30, seed: int = 42,
+             condition_label: str = "", on_progress=None) -> dict:
     engine = TrustEngineManager(use_adaptive_ucb=use_ucb)
     for u in sim.users:
         engine.register_user(u.user_id, u.role)
@@ -55,6 +56,9 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
     benign_total = 0
     events_per_hour = 1.0
 
+    if on_progress:
+        on_progress(f"[{condition_label}] Generating {days}-day event trace…")
+
     raw        = sim.generate_full_trace(days=days)
     ct_records = [e.to_cloudtrail_dict() for e in raw]
     trace      = load_cloudtrail_records(ct_records)
@@ -63,6 +67,13 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
         ev["attack_scenario"] = orig.attack_scenario
         ev["role"]            = orig.role
     events_per_hour = len(raw) / (days * 24)
+
+    total = len(trace)
+    # ~12 progress lines per condition regardless of trace size
+    log_every = max(1, total // 12)
+
+    if on_progress:
+        on_progress(f"[{condition_label}] {total:,} events queued — scoring + enforcement starting")
 
     for idx, ev in enumerate(trace):
         d   = ev
@@ -79,8 +90,12 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
 
         if is_atk and sc_name and sc_name not in attack_start:
             attack_start[sc_name] = idx
+            if on_progress:
+                on_progress(f"[{condition_label}] ⚠ attack injected: {sc_name} @ event {idx:,}")
         if is_atk and sc_name and sc_name not in first_detect and restricted:
             first_detect[sc_name] = idx
+            if on_progress:
+                on_progress(f"[{condition_label}] ✓ detected: {sc_name} @ event {idx:,} (zone={zone})")
 
         if not is_atk:
             benign_total += 1
@@ -91,6 +106,12 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
                 tp += 1
             elif not restricted and zone_changed:
                 fn += 1
+
+        if on_progress and (idx + 1) % log_every == 0:
+            on_progress(
+                f"[{condition_label}] {idx+1:,}/{total:,} events processed "
+                f"| TP={tp} FP={fp}"
+            )
 
     scenarios = list(MITRE_SCENARIOS.keys())
     detection_per_sc = {}
@@ -113,7 +134,7 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
     det_possible = sum(1 for v in detection_per_sc.values() if v is not None)
     fpr_per_10k  = round(fp / max(1, benign_total) * 10_000, 2)
 
-    return {
+    result = {
         "detection_rate":   round(det_total / max(1, det_possible), 4),
         "fpr_per_10k":      fpr_per_10k,
         "precision":        round(tp / max(1, tp + fp), 4),
@@ -121,15 +142,33 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
         "mttd_per_sc":      mttd_per_sc,
     }
 
+    if on_progress:
+        on_progress(
+            f"[{condition_label}] complete — detection={result['detection_rate']*100:.1f}% "
+            f"FPR/10K={result['fpr_per_10k']} precision={result['precision']*100:.1f}%"
+        )
 
-def run_comparison(n_users: int = 20, days: int = 30, seed: int = 42) -> dict:
+    return result
+
+
+def run_comparison(n_users: int = 20, days: int = 30, seed: int = 42,
+                    on_progress=None) -> dict:
     """
     n_users=20, days=30 gives fast results (~3 min on laptop).
     All 8 attack scenarios are still represented because assignment
     spreads victims evenly across the user list.
+
+    on_progress: optional callable(str) invoked with human-readable
+    status lines as the run proceeds — lets a caller (e.g. the FastAPI
+    background task) stream live progress to the frontend instead of
+    the UI sitting on a blank spinner for the full run.
     """
     sim     = CloudTrailSimulator(n_users=n_users, seed=seed)
     scorers = {}
+
+    if on_progress:
+        on_progress(f"Training {n_users} Isolation Forests (synthetic baseline, 14 days/user)…")
+
     for u in sim.users:
         bl         = sim.generate_baseline(u, days=14)
         ct_records = [e.to_cloudtrail_dict() for e in bl]
@@ -139,9 +178,27 @@ def run_comparison(n_users: int = 20, days: int = 30, seed: int = 42) -> dict:
         sc.fit(bl_events, role=u.role)
         scorers[u.user_id] = sc
 
-    cond_a = _run_one(sim, scorers, use_adversary=False, use_ucb=False, days=days, seed=seed)
-    cond_b = _run_one(sim, scorers, use_adversary=True,  use_ucb=False, days=days, seed=seed)
-    cond_c = _run_one(sim, scorers, use_adversary=True,  use_ucb=True,  days=days, seed=seed)
+    if on_progress:
+        on_progress(f"Baseline training complete — {n_users} models ready")
+        on_progress("Starting Condition A — static parameters, no adversary")
+
+    cond_a = _run_one(sim, scorers, use_adversary=False, use_ucb=False, days=days, seed=seed,
+                       condition_label="A", on_progress=on_progress)
+
+    if on_progress:
+        on_progress("Starting Condition B — static parameters + pacing adversary")
+
+    cond_b = _run_one(sim, scorers, use_adversary=True,  use_ucb=False, days=days, seed=seed,
+                       condition_label="B", on_progress=on_progress)
+
+    if on_progress:
+        on_progress("Starting Condition C — UCB adaptive parameters + pacing adversary")
+
+    cond_c = _run_one(sim, scorers, use_adversary=True,  use_ucb=True,  days=days, seed=seed,
+                       condition_label="C", on_progress=on_progress)
+
+    if on_progress:
+        on_progress("Building per-scenario detection and MTTD tables…")
 
     scenarios = list(MITRE_SCENARIOS.keys())
     table_detection, table_mttd = [], []
@@ -159,6 +216,9 @@ def run_comparison(n_users: int = 20, days: int = 30, seed: int = 42) -> dict:
             "B": cond_b["mttd_per_sc"].get(sc),
             "C": cond_c["mttd_per_sc"].get(sc),
         })
+
+    if on_progress:
+        on_progress("Analysis complete.")
 
     return {
         "summary": [

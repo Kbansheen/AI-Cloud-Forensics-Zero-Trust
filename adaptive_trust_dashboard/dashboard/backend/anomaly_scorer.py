@@ -26,7 +26,7 @@ from simulator import ROLE_ACTIONS
 
 NORMAL_SCORE_CAP    = 0.20   # max score for IF within baseline distribution
 VELOCITY_WINDOW     = 100    # rolling window size (events)
-VELOCITY_THRESHOLD  = 4.0    # trigger if action count > threshold x baseline
+VELOCITY_THRESHOLD  = 5.0    # trigger if action count > threshold x baseline
 
 
 class AnomalyScorer:

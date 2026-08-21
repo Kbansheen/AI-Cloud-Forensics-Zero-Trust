@@ -24,6 +24,7 @@ export default function App() {
   const [wsConnected,  setWsConnected]  = useState(false)
   const [toast,        setToast]        = useState(null)
   const [comparison,   setComparison]   = useState(null)
+  const [comparisonLog, setComparisonLog] = useState([])
   const [centreView,   setCentreView]   = useState('grid')
   const wsRef = useRef(null)
 
@@ -44,6 +45,9 @@ export default function App() {
       if (msg.users_snapshot) setUsers(msg.users_snapshot)
       if (msg.alerts)         setAlerts(msg.alerts)
       if (msg.metrics)        setMetrics(msg.metrics)
+      if (msg.type === 'comparison_progress' && msg.entry) {
+        setComparisonLog(prev => [...prev, msg.entry])
+      }
       if (msg.type === 'comparison_done') {
         api('/api/comparison/results').then(r => { setComparison(r); setCentreView('comparison') }).catch(() => {})
         showToast('Analysis complete — results ready', 'ok')
@@ -66,12 +70,15 @@ export default function App() {
         if (s.comparison_ready && !comparison) {
           api('/api/comparison/results').then(setComparison).catch(() => {})
         }
+        if (s.comparison_running && comparisonLog.length === 0) {
+          api('/api/comparison/log').then(r => setComparisonLog(r.log || [])).catch(() => {})
+        }
       } catch {}
     }
     poll()
     const t = setInterval(poll, 2500)
     return () => clearInterval(t)
-  }, [comparison])
+  }, [comparison, comparisonLog.length])
 
   useEffect(() => {
     if (!selectedUser) return
@@ -142,6 +149,7 @@ export default function App() {
 
   const handleRunComparison = async () => {
     try {
+      setComparisonLog([])
       await api('/api/comparison/run', { method:'POST' })
       setCentreView('comparison')
       showToast('Running analysis — this takes a few minutes…', 'info')
@@ -246,7 +254,7 @@ export default function App() {
               </div>
             ) : (
               <div style={{ overflowY:'auto', height:'100%' }}>
-                <ComparisonPanel results={comparison} running={status.comparison_running}/>
+                <ComparisonPanel results={comparison} running={status.comparison_running} log={comparisonLog}/>
                 {!comparison && !status.comparison_running && (
                   <div style={{ padding:'30px', textAlign:'center', color:'var(--text-dim)', fontFamily:'var(--font-mono)', fontSize:11 }}>
                     Click "Run Analysis" in the left panel to generate the comparison report
