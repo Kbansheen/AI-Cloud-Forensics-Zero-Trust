@@ -40,7 +40,8 @@ SCENARIO_LABELS = {
 
 def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
              days: int = 30, seed: int = 42,
-             condition_label: str = "", on_progress=None) -> dict:
+             condition_label: str = "", on_progress=None,
+             capture_trajectories: bool = False) -> dict:
     engine = TrustEngineManager(use_adaptive_ucb=use_ucb)
     for u in sim.users:
         engine.register_user(u.user_id, u.role)
@@ -67,6 +68,22 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
         ev["attack_scenario"] = orig.attack_scenario
         ev["role"]            = orig.role
     events_per_hour = len(raw) / (days * 24)
+
+    # Pre-scan to find which user_id was the target of each injected
+    # scenario, so we know whose full trust curve to record. Done up-front
+    # (not discovered mid-loop) so the user's FIRST event is captured too,
+    # not just events from the point the attack starts onward — we want
+    # the whole shape of the curve, before/during/after the attack.
+    uid_to_scenario: dict[str, str] = {}
+    trajectories: dict[str, list[dict]] = {}
+    if capture_trajectories:
+        scenario_victim: dict[str, str] = {}
+        for ev in trace:
+            sc = ev.get("attack_scenario")
+            if ev.get("is_attack") and sc and sc not in scenario_victim:
+                scenario_victim[sc] = get_user_id(ev)
+        uid_to_scenario = {uid: sc for sc, uid in scenario_victim.items()}
+        trajectories = {sc: [] for sc in scenario_victim}
 
     total = len(trace)
     # ~12 progress lines per condition regardless of trace size
@@ -96,6 +113,11 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
             first_detect[sc_name] = idx
             if on_progress:
                 on_progress(f"[{condition_label}] ✓ detected: {sc_name} @ event {idx:,} (zone={zone})")
+
+        if uid in uid_to_scenario:
+            trajectories[uid_to_scenario[uid]].append({
+                "idx": idx, "trust": res["trust"], "zone": zone,
+            })
 
         if not is_atk:
             benign_total += 1
@@ -140,6 +162,8 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
         "precision":        round(tp / max(1, tp + fp), 4),
         "detection_per_sc": detection_per_sc,
         "mttd_per_sc":      mttd_per_sc,
+        "attack_start":     attack_start,
+        "trajectories":     trajectories,
     }
 
     if on_progress:
@@ -189,13 +213,13 @@ def run_comparison(n_users: int = 20, days: int = 30, seed: int = 42,
         on_progress("Starting Condition B — static parameters + pacing adversary")
 
     cond_b = _run_one(sim, scorers, use_adversary=True,  use_ucb=False, days=days, seed=seed,
-                       condition_label="B", on_progress=on_progress)
+                       condition_label="B", on_progress=on_progress, capture_trajectories=True)
 
     if on_progress:
         on_progress("Starting Condition C — UCB adaptive parameters + pacing adversary")
 
     cond_c = _run_one(sim, scorers, use_adversary=True,  use_ucb=True,  days=days, seed=seed,
-                       condition_label="C", on_progress=on_progress)
+                       condition_label="C", on_progress=on_progress, capture_trajectories=True)
 
     if on_progress:
         on_progress("Building per-scenario detection and MTTD tables…")
@@ -220,6 +244,26 @@ def run_comparison(n_users: int = 20, days: int = 30, seed: int = 42,
     if on_progress:
         on_progress("Analysis complete.")
 
+    # Trust-trajectory comparison: for each scenario, the full trust curve
+    # of that scenario's own attacked user under static (B) vs adaptive (C)
+    # tuning — this is what actually shows the vulnerability (B drifts back
+    # up and gets exploited) and the fix (C holds), rather than just a
+    # single detection-rate number.
+    trajectories = {}
+    for sc in scenarios:
+        b_traj = cond_b["trajectories"].get(sc)
+        c_traj = cond_c["trajectories"].get(sc)
+        if not b_traj and not c_traj:
+            continue
+        label, tactic = SCENARIO_LABELS.get(sc, (sc, "—"))
+        trajectories[sc] = {
+            "label":            label,
+            "tactic":           tactic,
+            "attack_start_idx": cond_b["attack_start"].get(sc, cond_c["attack_start"].get(sc)),
+            "static":           b_traj or [],
+            "adaptive":         c_traj or [],
+        }
+
     return {
         "summary": [
             {"label": "A — Static λ/ρ, no adversary (Paper 1 baseline)",
@@ -231,4 +275,5 @@ def run_comparison(n_users: int = 20, days: int = 30, seed: int = 42,
         ],
         "table_detection": table_detection,
         "table_mttd":      table_mttd,
+        "trajectories":    trajectories,
     }

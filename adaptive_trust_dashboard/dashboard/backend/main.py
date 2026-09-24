@@ -19,12 +19,17 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
 
+import numpy as np
+import shap
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from simulator import CloudTrailSimulator, MITRE_SCENARIOS
-from feature_encoder import FeatureEncoder, get_user_id, get_action
+from feature_encoder import (
+    FeatureEncoder, get_user_id, get_action, get_resource_type,
+    _hash_slot, N_ACTIONS, N_RESOURCE_TYPES,
+)
 from anomaly_scorer import AnomalyScorer
 from trust_engine import TrustEngineManager
 from adversary import AdversaryConfig
@@ -52,6 +57,7 @@ class AppState:
     def __init__(self):
         self.sim: Optional[CloudTrailSimulator] = None
         self.scorers:         dict[str, AnomalyScorer] = {}
+        self.explainers:      dict[str, "shap.TreeExplainer"] = {}
         self.engine           = TrustEngineManager(use_adaptive_ucb=True)
         self.all_events:      list[dict] = []
         self.processed_idx:   int  = 0
@@ -198,6 +204,7 @@ def status():
         "comparison_ready":   state.comparison_results is not None,
         "comparison_running": state.comparison_running,
         "real_log_count":     state.real_log_count,
+        "total_alerts":       len(state.engine.get_alerts(200)),
         "timestamp":          datetime.utcnow().isoformat(),
     }
 
@@ -214,6 +221,7 @@ async def init_simulation():
     state.scenario_start       = {}
     state.scenario_detect      = {}
     state.scorers              = {}
+    state.explainers           = {}
     state.metrics              = {}
     state.real_log_count       = 0
     state.real_events_per_role = {}
@@ -403,6 +411,127 @@ def get_user(uid: str):
 @app.get("/api/alerts")
 def get_alerts(limit: int = 50):
     return state.engine.get_alerts(limit)
+
+
+def _label_feature_index(i: int, event: dict, action: str, resource: str) -> str:
+    """
+    Translate a raw feature-vector index back into a human-readable label.
+    Indices 0-499 are a hashed one-hot action bucket, 500-569 a hashed
+    resource-type bucket (see feature_encoder.encode). For the ONE slot
+    that this specific event actually activated, we know the real name;
+    any other slot with non-trivial SHAP weight reflects "this action/
+    resource was NOT one of the other roughly 500/70 possibilities" and
+    is labelled generically rather than guessed at, since the hash is
+    not invertible.
+    """
+    action_slot   = _hash_slot(action, N_ACTIONS)
+    resource_slot = N_ACTIONS + _hash_slot(resource, N_RESOURCE_TYPES)
+
+    if i == action_slot:
+        return f"API action: {action}"
+    if i < N_ACTIONS:
+        return f"API action vocabulary (bucket {i})"
+    if i == resource_slot:
+        return f"Resource type: {resource}"
+    if i < N_ACTIONS + N_RESOURCE_TYPES:
+        return f"Resource-type vocabulary (bucket {i})"
+
+    offset = i - (N_ACTIONS + N_RESOURCE_TYPES)
+    return {
+        0: "Call origin (console vs CLI/SDK)",
+        1: "Data volume transferred (log-scaled)",
+        2: "External source IP",
+        3: "Hour-of-day (sin component)",
+        4: "Hour-of-day (cos component)",
+        5: "Session age (unused placeholder)",
+    }.get(offset, f"feature[{i}]")
+
+
+@app.get("/api/alerts/{alert_id}/explain")
+def explain_alert(alert_id: str, top_k: int = 6):
+    """
+    On-demand SHAP explanation for a single enforcement alert. Deliberately
+    NOT computed during live scoring (Section 3.2 of Paper 1 — the live
+    pipeline must stay under a few ms/event) — this runs only when an
+    analyst clicks into one specific alert, against that user's own
+    trained Isolation Forest.
+    """
+    alert = state.engine.get_alert_by_id(alert_id)
+    if not alert:
+        raise HTTPException(404, f"Alert {alert_id} not found")
+
+    uid = alert.get("user_id")
+    idx = alert.get("event_idx")
+    if uid is None or idx is None or idx >= len(state.all_events):
+        raise HTTPException(404, "Underlying event no longer available for this alert")
+
+    event  = state.all_events[idx]
+    scorer = state.scorers.get(uid)
+    if not scorer or not scorer._fitted:
+        raise HTTPException(404, f"No trained model available for user {uid}")
+
+    action   = get_action(event)
+    resource = get_resource_type(event)
+
+    # anomaly_scorer.score() short-circuits to 1.0 for actions/resources
+    # never seen in this user's baseline, bypassing the Isolation Forest
+    # entirely (see anomaly_scorer.py, Signal 1: Novelty override). In
+    # that case a SHAP breakdown of the forest's path-length reasoning
+    # would be technically computable but NOT the true reason for the
+    # score — surface the override plainly instead of a misleading
+    # path-length attribution.
+    action_novel, resource_novel = scorer._encoder.novelty_flags(event)
+    if action_novel or resource_novel:
+        what = "action" if action_novel else "resource type"
+        value = action if action_novel else resource
+        return {
+            "alert_id":      alert_id,
+            "user_id":       uid,
+            "action":        action,
+            "resource_type": resource,
+            "anomaly_score": alert.get("anomaly_score"),
+            "method":        "Novelty override (not SHAP)",
+            "note": (
+                f"This score was set directly by the novelty override, not by the "
+                f"Isolation Forest: the {what} \"{value}\" never appeared in this "
+                f"user's training baseline. A SHAP path-length breakdown is skipped "
+                f"here because it would not reflect the actual basis for this score."
+            ),
+            "explanation": [],
+        }
+
+    if uid not in state.explainers:
+        state.explainers[uid] = shap.TreeExplainer(scorer._forest)
+    explainer = state.explainers[uid]
+
+    vec       = scorer._encoder.encode(event).astype(np.float32).reshape(1, -1)
+    shap_vals = explainer.shap_values(vec)[0]
+    # TreeExplainer explains the forest's raw path-length signal, where
+    # LOWER path-length = MORE anomalous (shorter isolation path). We flip
+    # the sign so a positive contribution intuitively means "pushed this
+    # event toward being flagged as anomalous" — verified empirically
+    # against score_samples() before wiring this up.
+    contributions = -shap_vals
+
+    order = np.argsort(-np.abs(contributions))[:top_k]
+    explanation = [
+        {
+            "feature":      _label_feature_index(int(i), event, action, resource),
+            "contribution": round(float(contributions[i]), 4),
+            "direction":    "increases anomaly" if contributions[i] > 0 else "decreases anomaly",
+        }
+        for i in order
+    ]
+
+    return {
+        "alert_id":      alert_id,
+        "user_id":       uid,
+        "action":        action,
+        "resource_type": resource,
+        "anomaly_score": alert.get("anomaly_score"),
+        "method":        "SHAP TreeExplainer (Isolation Forest path-length attribution)",
+        "explanation":   explanation,
+    }
 
 
 @app.get("/api/metrics")

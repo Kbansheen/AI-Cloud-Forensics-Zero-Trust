@@ -3,6 +3,7 @@ import MetricsBar from './components/MetricsBar'
 import TrustGrid from './components/TrustGrid'
 import UserDetailPanel from './components/UserDetailPanel'
 import AlertFeed from './components/AlertFeed'
+import AlertsExplorer from './components/AlertsExplorer'
 import ControlPanel from './components/ControlPanel'
 import ComparisonPanel from './components/ComparisonPanel'
 
@@ -13,9 +14,24 @@ const api = async (path, opts = {}) => {
   return res.json()
 }
 
+// Merge incoming alerts into the existing list instead of replacing it —
+// the websocket only ever sends the 5 most-recent alerts per tick, so a
+// plain setAlerts(incoming) was silently discarding everything earlier
+// in the session. Dedupe by alert_id, newest first, capped so the list
+// can't grow unbounded across a very long session.
+function mergeAlerts(prev, incoming, cap = 500) {
+  if (!incoming?.length) return prev
+  const seen = new Set(prev.map(a => a.alert_id))
+  const fresh = incoming.filter(a => !seen.has(a.alert_id))
+  if (fresh.length === 0) return prev
+  return [...fresh, ...prev].slice(0, cap)
+}
+
 export default function App() {
   const [users,        setUsers]        = useState([])
   const [alerts,       setAlerts]       = useState([])
+  const [showAllAlerts, setShowAllAlerts] = useState(false)
+  const [focusAlertId,  setFocusAlertId]  = useState(null)
   const [metrics,      setMetrics]      = useState({})
   const [status,       setStatus]       = useState({})
   const [selectedUser, setSelectedUser] = useState(null)
@@ -43,7 +59,7 @@ export default function App() {
     ws.onmessage = ({ data }) => {
       const msg = JSON.parse(data)
       if (msg.users_snapshot) setUsers(msg.users_snapshot)
-      if (msg.alerts)         setAlerts(msg.alerts)
+      if (msg.alerts)         setAlerts(prev => mergeAlerts(prev, msg.alerts))
       if (msg.metrics)        setMetrics(msg.metrics)
       if (msg.type === 'comparison_progress' && msg.entry) {
         setComparisonLog(prev => [...prev, msg.entry])
@@ -73,12 +89,15 @@ export default function App() {
         if (s.comparison_running && comparisonLog.length === 0) {
           api('/api/comparison/log').then(r => setComparisonLog(r.log || [])).catch(() => {})
         }
+        if (s.processed_events > 0 && alerts.length === 0) {
+          api('/api/alerts?limit=500').then(a => setAlerts(prev => mergeAlerts(prev, a))).catch(() => {})
+        }
       } catch {}
     }
     poll()
     const t = setInterval(poll, 2500)
     return () => clearInterval(t)
-  }, [comparison, comparisonLog.length])
+  }, [comparison, comparisonLog.length, alerts.length])
 
   useEffect(() => {
     if (!selectedUser) return
@@ -101,7 +120,7 @@ export default function App() {
     try {
       const r = await api('/api/simulation/init', { method:'POST' })
       const [s, u] = await Promise.all([api('/api/status'), api('/api/users')])
-      setStatus(s); setUsers(u)
+      setStatus(s); setUsers(u); setAlerts([])
       showToast(`Ready: ${r.users} identities · ${r.events?.toLocaleString()} events`, 'ok')
     } catch (e) { showToast('Init failed: ' + e.message, 'danger') }
   }
@@ -114,9 +133,9 @@ export default function App() {
         body:JSON.stringify({ n_events:n })
       })
       const [s, u, a, m] = await Promise.all([
-        api('/api/status'), api('/api/users'), api('/api/alerts'), api('/api/metrics')
+        api('/api/status'), api('/api/users'), api('/api/alerts?limit=500'), api('/api/metrics')
       ])
-      setStatus(s); setUsers(u); setAlerts(a); setMetrics(m)
+      setStatus(s); setUsers(u); setAlerts(prev => mergeAlerts(prev, a)); setMetrics(m)
     } catch (e) { showToast('Step failed: ' + e.message, 'danger') }
   }
 
@@ -132,8 +151,8 @@ export default function App() {
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({ scenario })
       })
-      const [u, a] = await Promise.all([api('/api/users'), api('/api/alerts')])
-      setUsers(u); setAlerts(a)
+      const [u, a] = await Promise.all([api('/api/users'), api('/api/alerts?limit=500')])
+      setUsers(u); setAlerts(prev => mergeAlerts(prev, a))
     } catch (e) { showToast('Attack failed: ' + e.message, 'danger') }
   }
 
@@ -166,6 +185,11 @@ export default function App() {
         setUserUcb(u.ucb || null)
       }).catch(() => {})
   }, [])
+
+  const handleExplainAlert = (alert) => {
+    setFocusAlertId(alert.alert_id)
+    setShowAllAlerts(true)
+  }
 
   const TOAST_C = { info:'#3b82f6', ok:'#10b981', warn:'#f59e0b', danger:'#ef4444' }
 
@@ -270,9 +294,22 @@ export default function App() {
 
         {/* Right: alerts */}
         <aside style={{ borderLeft:'1px solid var(--border)', padding:'14px', overflowY:'auto', background:'var(--bg-surface)' }}>
-          <AlertFeed alerts={alerts}/>
+          <AlertFeed
+            alerts={alerts}
+            totalAlerts={status.total_alerts}
+            onViewAll={() => { setFocusAlertId(null); setShowAllAlerts(true) }}
+            onExplain={handleExplainAlert}
+          />
         </aside>
       </div>
+
+      {showAllAlerts && (
+        <AlertsExplorer
+          alerts={alerts}
+          focusAlertId={focusAlertId}
+          onClose={() => { setShowAllAlerts(false); setFocusAlertId(null) }}
+        />
+      )}
 
       {/* Toast */}
       {toast && (

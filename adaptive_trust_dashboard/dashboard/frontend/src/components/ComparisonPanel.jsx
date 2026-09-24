@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import TrajectoryComparison from './TrajectoryComparison'
 
 const D = ({ v }) => {
   if (v === null || v === undefined) return <span style={{ color:'var(--text-dim)', fontSize:9 }}>—</span>
@@ -165,7 +166,7 @@ export default function ComparisonPanel({ results, running, log = [] }) {
 
   if (!results) return null
 
-  const { summary, table_detection, table_mttd } = results
+  const { summary, table_detection, table_mttd, trajectories } = results
 
   return (
     <div style={{ padding:'16px', display:'flex', flexDirection:'column', gap:20 }}>
@@ -228,6 +229,16 @@ export default function ComparisonPanel({ results, running, log = [] }) {
           </tbody>
         </table>
       </div>
+
+      {/* Trust trajectory: static vs adaptive, same attack, same user */}
+      {trajectories && Object.keys(trajectories).length > 0 && (
+        <div>
+          <div style={{ fontSize:9, textTransform:'uppercase', letterSpacing:'.1em', color:'var(--text-dim)', fontFamily:'var(--font-mono)', marginBottom:8 }}>
+            Trust trajectory — static vs adaptive under the same attack
+          </div>
+          <TrajectoryComparison trajectories={trajectories} />
+        </div>
+      )}
 
       {/* Collapsible run log — preserved after completion for transparency */}
       {log.length > 0 && (

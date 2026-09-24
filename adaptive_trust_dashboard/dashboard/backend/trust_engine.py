@@ -239,6 +239,12 @@ class TrustEngineManager:
     def get_alerts(self, limit: int = 50) -> list[dict]:
         return list(reversed(self._alerts[-limit:]))
 
+    def get_alert_by_id(self, alert_id: str) -> Optional[dict]:
+        for a in self._alerts:
+            if a["alert_id"] == alert_id:
+                return a
+        return None
+
     def get_ucb_state(self, uid: str) -> Optional[dict]:
         learner = self._ucb_learners.get(uid)
         if not learner:
