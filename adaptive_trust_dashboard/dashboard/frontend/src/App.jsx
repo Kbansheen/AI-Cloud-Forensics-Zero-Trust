@@ -253,10 +253,10 @@ export default function App() {
       <MetricsBar metrics={metrics}/>
 
       {/* Main 3-column layout */}
-      <div style={{ flex:1, display:'grid', gridTemplateColumns:'210px 1fr 280px', overflow:'hidden', minHeight:0 }}>
+      <div style={{ flex:1, display:'flex', overflow:'hidden', minHeight:0 }}>
 
         {/* Left: controls */}
-        <aside style={{ borderRight:'1px solid var(--border)', padding:'14px', overflowY:'auto', background:'var(--bg-surface)' }}>
+        <aside style={{ width:210, flexShrink:0, borderRight:'1px solid var(--border)', padding:'14px', overflowY:'auto', background:'var(--bg-surface)' }}>
           <ControlPanel
             status={status}
             onInit={handleInit}
@@ -270,8 +270,8 @@ export default function App() {
         </aside>
 
         {/* Centre */}
-        <main style={{ display:'grid', gridTemplateRows:'1fr 240px', overflow:'hidden' }}>
-          <div style={{ overflowY:'auto' }}>
+        <main style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+          <div style={{ flex:1, overflowY:'auto', minHeight:0 }}>
             {centreView === 'grid' ? (
               <div style={{ padding:'14px' }}>
                 <TrustGrid users={users} onSelectUser={handleSelectUser} selectedUser={selectedUser}/>
@@ -287,13 +287,21 @@ export default function App() {
               </div>
             )}
           </div>
-          <div style={{ borderTop:'1px solid var(--border)', padding:'14px', background:'var(--bg-surface)', overflow:'hidden' }}>
-            <UserDetailPanel user={selectedUser} history={userHistory} ucb={userUcb}/>
+          <div style={{
+            height:240, minHeight:150, maxHeight:'60vh', flexShrink:0,
+            resize:'vertical', overflow:'auto',
+            borderTop:'1px solid var(--border)', padding:'14px', background:'var(--bg-surface)',
+          }}>
+            <UserDetailPanel user={selectedUser} history={userHistory} ucb={userUcb} onClose={() => setSelectedUser(null)}/>
           </div>
         </main>
 
         {/* Right: alerts */}
-        <aside style={{ borderLeft:'1px solid var(--border)', padding:'14px', overflowY:'auto', background:'var(--bg-surface)' }}>
+        <aside style={{
+          width:280, minWidth:200, maxWidth:520, flexShrink:0,
+          resize:'horizontal', overflow:'auto',
+          borderLeft:'1px solid var(--border)', padding:'14px', background:'var(--bg-surface)',
+        }}>
           <AlertFeed
             alerts={alerts}
             totalAlerts={status.total_alerts}
