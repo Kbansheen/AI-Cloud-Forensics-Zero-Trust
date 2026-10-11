@@ -28,7 +28,7 @@ function CustomTooltip({ active, payload }) {
   )
 }
 
-export default function UserDetailPanel({ user, history, ucb }) {
+export default function UserDetailPanel({ user, history, ucb, onClose }) {
   const [chartMode, setChartMode] = useState('trust')   // 'trust' | 'params'
 
   if (!user) return (
@@ -55,6 +55,19 @@ export default function UserDetailPanel({ user, history, ucb }) {
           </div>
           <div style={{ fontSize:9, color:zoneColor, textTransform:'uppercase', letterSpacing:'.1em' }}>{user.zone?.replace('_',' ')}</div>
         </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            title="Close"
+            style={{
+              marginLeft:10, width:20, height:20, display:'flex', alignItems:'center', justifyContent:'center',
+              background:'transparent', border:'1px solid var(--border)', borderRadius:4,
+              color:'var(--text-sec)', cursor:'pointer', fontSize:12, fontFamily:'var(--font-mono)', lineHeight:1,
+            }}
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Stats strip */}
@@ -86,7 +99,7 @@ export default function UserDetailPanel({ user, history, ucb }) {
           <ResponsiveContainer width="100%" height="100%">
             {chartMode === 'trust' ? (
               <ComposedChart data={data} margin={{ top:4, right:4, left:-20, bottom:0 }}>
-                <XAxis dataKey="idx" tick={{ fontSize:8, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}/>
+                <XAxis dataKey="idx" type="number" tickCount={6} domain={['dataMin','dataMax']} tick={{ fontSize:8, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}/>
                 <YAxis domain={[0,1]} ticks={[0,.4,.6,.8,1]} tick={{ fontSize:8, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}/>
                 <Tooltip content={<CustomTooltip />}/>
                 <ReferenceLine y={0.80} stroke="#10b981" strokeDasharray="4 3" strokeWidth={1}
@@ -99,7 +112,7 @@ export default function UserDetailPanel({ user, history, ucb }) {
               </ComposedChart>
             ) : (
               <ComposedChart data={data} margin={{ top:4, right:4, left:-20, bottom:0 }}>
-                <XAxis dataKey="idx" tick={{ fontSize:8, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}/>
+                <XAxis dataKey="idx" type="number" tickCount={6} domain={['dataMin','dataMax']} tick={{ fontSize:8, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}/>
                 <YAxis domain={[0,.35]} tick={{ fontSize:8, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}/>
                 <Tooltip content={<CustomTooltip />}/>
                 <ReferenceLine y={0.15} stroke="#93c5fd" strokeDasharray="4 3" strokeWidth={1}
