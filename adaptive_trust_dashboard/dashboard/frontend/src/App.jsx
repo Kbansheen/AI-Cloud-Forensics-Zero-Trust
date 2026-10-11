@@ -6,6 +6,7 @@ import AlertFeed from './components/AlertFeed'
 import AlertsExplorer from './components/AlertsExplorer'
 import ControlPanel from './components/ControlPanel'
 import ComparisonPanel from './components/ComparisonPanel'
+import BaselineScorecard from './components/BaselineScorecard'
 
 const API = ''
 const api = async (path, opts = {}) => {
@@ -221,6 +222,7 @@ export default function App() {
           {[
             { id:'grid',       label:'Live Monitor' },
             { id:'comparison', label:'Analysis Report' },
+            { id:'scorecard',  label:'Baseline vs Adaptive' },
           ].map(v => (
             <button key={v.id} onClick={() => setCentreView(v.id)} style={{
               padding:'4px 12px', fontSize:10, fontFamily:'var(--font-mono)',
@@ -275,6 +277,20 @@ export default function App() {
             {centreView === 'grid' ? (
               <div style={{ padding:'14px' }}>
                 <TrustGrid users={users} onSelectUser={handleSelectUser} selectedUser={selectedUser}/>
+              </div>
+            ) : centreView === 'scorecard' ? (
+              <div style={{ overflowY:'auto', height:'100%' }}>
+                <BaselineScorecard results={comparison}/>
+                {!comparison && !status.comparison_running && (
+                  <div style={{ padding:'30px', textAlign:'center', color:'var(--text-dim)', fontFamily:'var(--font-mono)', fontSize:11 }}>
+                    Click "Run Analysis" in the left panel to generate the baseline vs adaptive scorecard
+                  </div>
+                )}
+                {status.comparison_running && (
+                  <div style={{ padding:'30px', textAlign:'center', color:'var(--text-dim)', fontFamily:'var(--font-mono)', fontSize:11 }}>
+                    Analysis running — see Analysis Report tab for live progress
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ overflowY:'auto', height:'100%' }}>
