@@ -29,7 +29,26 @@ function TrustBar({ trust, zone }) {
   )
 }
 
-function UserCard({ user, onClick, selected }) {
+function DataSourceBadge({ isReal, realCount }) {
+  return (
+    <span
+      title={isReal ? `Baseline includes ${realCount} real CloudTrail events for this role` : 'Baseline is fully synthetic for this role'}
+      style={{
+        fontSize: 7, fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '.04em',
+        padding: '1px 4px', borderRadius: 3, flexShrink: 0,
+        color: isReal ? '#10b981' : 'var(--text-dim)',
+        border: `1px solid ${isReal ? '#10b98155' : 'var(--border)'}`,
+        background: isReal ? '#10b98115' : 'transparent',
+      }}
+    >
+      {isReal ? 'REAL' : 'SYNTH'}
+    </span>
+  )
+}
+
+function UserCard({ user, onClick, selected, realEventsPerRole }) {
+  const realCount = realEventsPerRole?.[user.role] || 0
+  const isReal = realCount > 0
   const z = ZONE_STYLE[user.zone] || ZONE_STYLE.normal_access
   const prevTrust = useRef(user.trust)
   const flash = useRef(false)
@@ -80,8 +99,11 @@ function UserCard({ user, onClick, selected }) {
         </span>
       </div>
 
-      <div style={{ fontSize: 9, color: 'var(--text-dim)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {user.role}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+        <span style={{ fontSize: 9, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+          {user.role}
+        </span>
+        <DataSourceBadge isReal={isReal} realCount={realCount} />
       </div>
 
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 700, color: z.color, lineHeight: 1 }}>
@@ -94,8 +116,9 @@ function UserCard({ user, onClick, selected }) {
   )
 }
 
-export default function TrustGrid({ users, onSelectUser, selectedUser }) {
+export default function TrustGrid({ users, onSelectUser, selectedUser, realEventsPerRole }) {
   const sorted = [...users].sort((a, b) => a.trust - b.trust)
+  const realRoleCount = Object.keys(realEventsPerRole || {}).length
 
   return (
     <div>
@@ -119,6 +142,18 @@ export default function TrustGrid({ users, onSelectUser, selectedUser }) {
             </span>
           </div>
         ))}
+        {realRoleCount > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+            <span style={{
+              fontSize: 7, fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '.04em',
+              padding: '1px 4px', borderRadius: 3, color: '#10b981',
+              border: '1px solid #10b98155', background: '#10b98115',
+            }}>REAL</span>
+            <span style={{ fontSize: 10, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
+              = baseline blends real CloudTrail logs for that role ({realRoleCount} role{realRoleCount === 1 ? '' : 's'})
+            </span>
+          </div>
+        )}
       </div>
 
       <div style={{
@@ -132,6 +167,7 @@ export default function TrustGrid({ users, onSelectUser, selectedUser }) {
             user={user}
             onClick={onSelectUser}
             selected={selectedUser?.user_id === user.user_id}
+            realEventsPerRole={realEventsPerRole}
           />
         ))}
       </div>
