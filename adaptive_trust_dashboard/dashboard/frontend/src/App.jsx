@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import MetricsBar from './components/MetricsBar'
 import TrustGrid from './components/TrustGrid'
 import UserDetailPanel from './components/UserDetailPanel'
@@ -43,6 +43,7 @@ export default function App() {
   const [comparison,   setComparison]   = useState(null)
   const [comparisonLog, setComparisonLog] = useState([])
   const [centreView,   setCentreView]   = useState('grid')
+  const [shapChips,    setShapChips]    = useState({})   // { [user_id]: { alertId, loading, feature, direction, novelty, note, error } }
   const wsRef = useRef(null)
 
   const showToast = (msg, type = 'info') => {
@@ -192,6 +193,50 @@ export default function App() {
     setShowAllAlerts(true)
   }
 
+  // Most recent alert per user — `alerts` is already newest-first (see
+  // mergeAlerts / backend get_alerts), so the first match per user_id wins.
+  const latestAlertByUser = useMemo(() => {
+    const m = {}
+    for (const a of alerts) {
+      if (!m[a.user_id]) m[a.user_id] = a
+    }
+    return m
+  }, [alerts])
+
+  // SHAP top-reason chip for Live Monitor cards. Deliberately NOT computed
+  // for every user/every poll tick — matches the backend's own on-demand
+  // design (/api/alerts/{id}/explain is explicitly kept out of the live
+  // scoring path). We fetch once per alert, only for users currently in a
+  // non-normal zone, cache by user_id+alertId, and never refetch the same
+  // alert twice.
+  useEffect(() => {
+    users.forEach(u => {
+      if (u.zone === 'normal_access') return
+      const alert = latestAlertByUser[u.user_id]
+      if (!alert) return
+      const existing = shapChips[u.user_id]
+      if (existing && existing.alertId === alert.alert_id) return
+
+      setShapChips(prev => ({ ...prev, [u.user_id]: { alertId: alert.alert_id, loading: true } }))
+      api(`/api/alerts/${alert.alert_id}/explain?top_k=1`)
+        .then(res => {
+          if (res.explanation && res.explanation.length > 0) {
+            const top = res.explanation[0]
+            setShapChips(prev => ({ ...prev, [u.user_id]: {
+              alertId: alert.alert_id, loading: false, feature: top.feature, direction: top.direction,
+            } }))
+          } else {
+            setShapChips(prev => ({ ...prev, [u.user_id]: {
+              alertId: alert.alert_id, loading: false, novelty: true, note: res.note,
+            } }))
+          }
+        })
+        .catch(() => {
+          setShapChips(prev => ({ ...prev, [u.user_id]: { alertId: alert.alert_id, loading: false, error: true } }))
+        })
+    })
+  }, [users, latestAlertByUser])
+
   const TOAST_C = { info:'#3b82f6', ok:'#10b981', warn:'#f59e0b', danger:'#ef4444' }
 
   return (
@@ -276,7 +321,7 @@ export default function App() {
           <div style={{ flex:1, overflowY:'auto', minHeight:0 }}>
             {centreView === 'grid' ? (
               <div style={{ padding:'14px' }}>
-                <TrustGrid users={users} onSelectUser={handleSelectUser} selectedUser={selectedUser} realEventsPerRole={status.real_events_per_role}/>
+                <TrustGrid users={users} onSelectUser={handleSelectUser} selectedUser={selectedUser} realEventsPerRole={status.real_events_per_role} shapChips={shapChips}/>
               </div>
             ) : centreView === 'scorecard' ? (
               <div style={{ overflowY:'auto', height:'100%' }}>
