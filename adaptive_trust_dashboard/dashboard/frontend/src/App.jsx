@@ -276,7 +276,7 @@ export default function App() {
           <div style={{ flex:1, overflowY:'auto', minHeight:0 }}>
             {centreView === 'grid' ? (
               <div style={{ padding:'14px' }}>
-                <TrustGrid users={users} onSelectUser={handleSelectUser} selectedUser={selectedUser}/>
+                <TrustGrid users={users} onSelectUser={handleSelectUser} selectedUser={selectedUser} realEventsPerRole={status.real_events_per_role}/>
               </div>
             ) : centreView === 'scorecard' ? (
               <div style={{ overflowY:'auto', height:'100%' }}>
