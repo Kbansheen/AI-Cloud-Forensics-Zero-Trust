@@ -1,5 +1,8 @@
 import React, { useState } from 'react'
-import { ComposedChart, Line, XAxis, YAxis, ReferenceLine, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import {
+  ComposedChart, Line, XAxis, YAxis, ReferenceLine, Tooltip, ResponsiveContainer, Legend,
+  BarChart, Bar, Cell,
+} from 'recharts'
 
 const ZONE_COLOURS = {
   normal_access: '#10b981',
@@ -28,8 +31,20 @@ function CustomTooltip({ active, payload }) {
   )
 }
 
+function ArmsTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  const d = payload[0]?.payload
+  return (
+    <div style={{ background:'var(--bg-card)', border:'1px solid var(--border)', padding:'8px 12px', borderRadius:6, fontSize:10, fontFamily:'var(--font-mono)' }}>
+      <div style={{ color:'var(--text-sec)', marginBottom:3 }}>λ = {d?.lambda_?.toFixed(2)}  ρ = {d?.rho?.toFixed(2)}</div>
+      <div style={{ color:'#93c5fd', fontWeight:700 }}>mean reward = {d?.mean_q?.toFixed(3)}</div>
+      <div style={{ color:'var(--text-dim)', marginTop:2 }}>{d?.n} pulls{d?.isCurrent ? ' · current arm' : ''}{d?.isBest ? ' · best so far' : ''}</div>
+    </div>
+  )
+}
+
 export default function UserDetailPanel({ user, history, ucb, onClose }) {
-  const [chartMode, setChartMode] = useState('trust')   // 'trust' | 'params'
+  const [chartMode, setChartMode] = useState('trust')   // 'trust' | 'params' | 'arms'
 
   if (!user) return (
     <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-dim)', fontFamily:'var(--font-mono)', fontSize:11 }}>
@@ -39,6 +54,15 @@ export default function UserDetailPanel({ user, history, ucb, onClose }) {
 
   const zoneColor = ZONE_COLOURS[user.zone] || '#3b82f6'
   const data = (history || []).slice(-200)
+
+  const closeEnough = (a, b) => a != null && b != null && Math.abs(a - b) < 0.001
+  const armData = (ucb?.arm_table || []).map(a => ({
+    ...a,
+    label: `${a.lambda_.toFixed(2)}/${a.rho.toFixed(2)}`,
+    isCurrent: closeEnough(a.lambda_, user.lambda_) && closeEnough(a.rho, user.rho),
+    isBest: ucb?.best_arm && closeEnough(a.lambda_, ucb.best_arm.lambda_) && closeEnough(a.rho, ucb.best_arm.rho),
+  }))
+  const armColor = (a) => a.isCurrent ? '#c4b5fd' : a.isBest ? '#10b981' : '#3b82f680'
 
   return (
     <div style={{ height:'100%', display:'flex', flexDirection:'column' }}>
@@ -88,14 +112,42 @@ export default function UserDetailPanel({ user, history, ucb, onClose }) {
       </div>
 
       {/* Chart mode tabs */}
-      <div style={{ display:'flex', gap:4, marginBottom:8 }}>
+      <div style={{ display:'flex', gap:4, marginBottom:8, flexWrap:'wrap' }}>
         <button style={TAB_STYLE(chartMode==='trust')}  onClick={() => setChartMode('trust')}>Trust trajectory</button>
-        <button style={TAB_STYLE(chartMode==='params')} onClick={() => setChartMode('params')}>UCB λ/ρ evolution</button>
+        <button style={TAB_STYLE(chartMode==='params')} onClick={() => setChartMode('params')}>λ/ρ over time</button>
+        <button style={TAB_STYLE(chartMode==='arms')}   onClick={() => setChartMode('arms')}>UCB arm convergence</button>
       </div>
+
+      {chartMode === 'arms' && ucb?.best_arm && (
+        <div style={{ fontSize:9, color:'var(--text-sec)', marginBottom:6, fontFamily:'var(--font-mono)' }}>
+          Best arm so far: <span style={{ color:'#10b981' }}>λ={ucb.best_arm.lambda_.toFixed(2)} ρ={ucb.best_arm.rho.toFixed(2)}</span>
+          {' '}(reward {ucb.best_arm.mean_reward.toFixed(3)}) · current:{' '}
+          <span style={{ color:'#c4b5fd' }}>λ={user.lambda_?.toFixed(2)} ρ={user.rho?.toFixed(2)}</span>
+        </div>
+      )}
 
       {/* Chart */}
       <div style={{ flex:1, minHeight:0 }}>
-        {data.length > 1 ? (
+        {chartMode === 'arms' ? (
+          armData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={armData} margin={{ top:4, right:4, left:-20, bottom:18 }}>
+                <XAxis dataKey="label" tick={{ fontSize:7, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}
+                  angle={-40} textAnchor="end" interval={0} height={36}/>
+                <YAxis tick={{ fontSize:8, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}/>
+                <Tooltip content={<ArmsTooltip />}/>
+                <ReferenceLine y={0} stroke="var(--border)" strokeWidth={1}/>
+                <Bar dataKey="mean_q" isAnimationActive={false}>
+                  {armData.map((a, i) => <Cell key={i} fill={armColor(a)} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'var(--text-dim)', fontSize:10, fontFamily:'var(--font-mono)', textAlign:'center', padding:'0 20px' }}>
+              No bandit data for this identity — switch to Adaptive (UCB) mode and run events to populate arm statistics
+            </div>
+          )
+        ) : data.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
             {chartMode === 'trust' ? (
               <ComposedChart data={data} margin={{ top:4, right:4, left:-20, bottom:0 }}>
