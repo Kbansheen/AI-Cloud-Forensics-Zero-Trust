@@ -12,26 +12,26 @@ export function AlertCard({ alert, onExplain }) {
 
   return (
     <div style={{
-      padding: '12px 14px',
+      padding: '14px 16px',
       borderLeft: `3px solid ${zs.color}`,
       background: 'var(--bg-card)',
       borderRadius: '0 8px 8px 0',
-      marginBottom: 8,
+      marginBottom: 10,
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ fontSize: 13 }}>{zs.icon}</span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: zs.color, letterSpacing: '0.04em' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 4, marginBottom: 7 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12 }}>{zs.icon}</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: zs.color, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
             {zs.label}
           </span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: 'var(--text-pri)' }}>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: 'var(--text-pri)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {alert.user_id}
           </span>
         </div>
-        <span style={{ fontSize: 11, color: 'var(--text-sec)', fontFamily: 'var(--font-mono)' }}>{ts}</span>
+        <span style={{ fontSize: 10, color: 'var(--text-sec)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>{ts}</span>
       </div>
 
-      <div style={{ fontSize: 12, color: 'var(--text-sec)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-sec)', fontFamily: 'var(--font-mono)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {alert.role} · T={alert.trust?.toFixed(3)} · score={alert.anomaly_score?.toFixed(3)}
       </div>
 
