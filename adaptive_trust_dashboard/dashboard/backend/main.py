@@ -72,6 +72,7 @@ class AppState:
         self.comparison_running: bool = False
         self.comparison_log:  list[dict] = []
         self.real_log_count:  int  = 0
+        self.real_events_per_role: dict[str, int] = {}
 
 state = AppState()
 
@@ -204,6 +205,7 @@ def status():
         "comparison_ready":   state.comparison_results is not None,
         "comparison_running": state.comparison_running,
         "real_log_count":     state.real_log_count,
+        "real_events_per_role": state.real_events_per_role,
         "total_alerts":       len(state.engine.get_alerts(200)),
         "timestamp":          datetime.utcnow().isoformat(),
     }
@@ -244,6 +246,7 @@ async def init_simulation():
         real_by_role = _load_real_logs_per_role(real_logs_path)
         total_real   = sum(len(v) for v in real_by_role.values())
         state.real_log_count = total_real
+        state.real_events_per_role = {role: len(evts) for role, evts in real_by_role.items()}
         print(f"[REAL LOGS] {total_real} valid events across {len(real_by_role)} roles")
     else:
         print("[REAL LOGS] No real_logs/ folder — using synthetic baseline only")
