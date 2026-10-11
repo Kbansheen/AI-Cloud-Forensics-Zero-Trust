@@ -46,7 +46,27 @@ function DataSourceBadge({ isReal, realCount }) {
   )
 }
 
-function UserCard({ user, onClick, selected, realEventsPerRole }) {
+function ShapChip({ chip }) {
+  if (!chip || chip.loading || chip.error) return null
+  const label = chip.novelty ? 'novel action/resource' : chip.feature
+  const title = chip.novelty ? chip.note : `Top SHAP reason: ${chip.feature} (${chip.direction})`
+  return (
+    <div
+      title={title}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 3,
+        fontSize: 8, fontFamily: 'var(--font-mono)',
+        color: chip.novelty ? '#f59e0b' : '#f87171',
+        marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}
+    >
+      <span style={{ flexShrink: 0 }}>⚡</span>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+    </div>
+  )
+}
+
+function UserCard({ user, onClick, selected, realEventsPerRole, shapChip }) {
   const realCount = realEventsPerRole?.[user.role] || 0
   const isReal = realCount > 0
   const z = ZONE_STYLE[user.zone] || ZONE_STYLE.normal_access
@@ -106,6 +126,8 @@ function UserCard({ user, onClick, selected, realEventsPerRole }) {
         <DataSourceBadge isReal={isReal} realCount={realCount} />
       </div>
 
+      {user.zone !== 'normal_access' && <ShapChip chip={shapChip} />}
+
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 700, color: z.color, lineHeight: 1 }}>
         {(user.trust * 100).toFixed(0)}
         <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-sec)', marginLeft: 1 }}>%</span>
@@ -116,7 +138,7 @@ function UserCard({ user, onClick, selected, realEventsPerRole }) {
   )
 }
 
-export default function TrustGrid({ users, onSelectUser, selectedUser, realEventsPerRole }) {
+export default function TrustGrid({ users, onSelectUser, selectedUser, realEventsPerRole, shapChips }) {
   const sorted = [...users].sort((a, b) => a.trust - b.trust)
   const realRoleCount = Object.keys(realEventsPerRole || {}).length
 
@@ -168,6 +190,7 @@ export default function TrustGrid({ users, onSelectUser, selectedUser, realEvent
             onClick={onSelectUser}
             selected={selectedUser?.user_id === user.user_id}
             realEventsPerRole={realEventsPerRole}
+            shapChip={shapChips?.[user.user_id]}
           />
         ))}
       </div>
