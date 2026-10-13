@@ -1,4 +1,5 @@
 import React from 'react'
+import { exportComparisonPDF } from '../utils/pdfExport'
 
 // Mirrors the colour scheme already used in ComparisonPanel so the two
 // views read as one consistent story rather than two different dashboards.
@@ -66,7 +67,7 @@ function StatCard({ row, meta }) {
   )
 }
 
-export default function BaselineScorecard({ results }) {
+export default function BaselineScorecard({ results, realLogCount }) {
   if (!results) return null
   const { summary } = results
   if (!summary || summary.length < 3) return null
@@ -78,6 +79,20 @@ export default function BaselineScorecard({ results }) {
 
   return (
     <div style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          onClick={() => exportComparisonPDF(results, { realLogCount })}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 12px', fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 700,
+            background: 'rgba(124,58,237,.12)', border: '1px solid var(--z-purple)', borderRadius: 5,
+            color: '#c4b5fd', cursor: 'pointer',
+          }}
+        >
+          ⬇ Export PDF
+        </button>
+      </div>
 
       {/* Headline finding */}
       <div style={{
