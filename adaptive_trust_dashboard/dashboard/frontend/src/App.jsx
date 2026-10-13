@@ -7,6 +7,7 @@ import AlertsExplorer from './components/AlertsExplorer'
 import ControlPanel from './components/ControlPanel'
 import ComparisonPanel from './components/ComparisonPanel'
 import BaselineScorecard from './components/BaselineScorecard'
+import GuidedTour, { TOUR_STEPS } from './components/GuidedTour'
 
 const API = ''
 const api = async (path, opts = {}) => {
@@ -44,7 +45,13 @@ export default function App() {
   const [comparisonLog, setComparisonLog] = useState([])
   const [centreView,   setCentreView]   = useState('grid')
   const [shapChips,    setShapChips]    = useState({})   // { [user_id]: { alertId, loading, feature, direction, novelty, note, error } }
+  const [tourStep,     setTourStep]     = useState(null) // null = inactive, else index into TOUR_STEPS
   const wsRef = useRef(null)
+
+  const startTour = () => { setCentreView('grid'); setTourStep(0) }
+  const tourNext  = () => setTourStep(i => (i >= TOUR_STEPS.length - 1 ? null : i + 1))
+  const tourBack  = () => setTourStep(i => (i > 0 ? i - 1 : i))
+  const tourClose = () => setTourStep(null)
 
   const showToast = (msg, type = 'info') => {
     setToast({ msg, type })
@@ -243,7 +250,7 @@ export default function App() {
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
 
       {/* Header */}
-      <header style={{
+      <header data-tour="header" style={{
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'0 20px', height:46,
         borderBottom:'1px solid var(--border)', background:'var(--bg-surface)', flexShrink:0
@@ -263,7 +270,7 @@ export default function App() {
         </div>
 
         {/* View toggle */}
-        <div style={{ display:'flex', gap:4 }}>
+        <div data-tour="view-toggle" style={{ display:'flex', gap:4 }}>
           {[
             { id:'grid',       label:'Live Monitor' },
             { id:'comparison', label:'Analysis Report' },
@@ -293,17 +300,28 @@ export default function App() {
           }}>
             {status.is_running ? '⚡ RUNNING' : (status.is_initialised ? '✓ READY' : '○ IDLE')}
           </div>
+          <button
+            onClick={startTour}
+            title="Guided tour"
+            style={{
+              width:20, height:20, display:'flex', alignItems:'center', justifyContent:'center',
+              borderRadius:'50%', background:'transparent', border:'1px solid var(--border)',
+              color:'var(--text-sec)', cursor:'pointer', fontSize:10, fontFamily:'var(--font-mono)', fontWeight:700,
+            }}
+          >?</button>
         </div>
       </header>
 
       {/* Metrics bar */}
-      <MetricsBar metrics={metrics}/>
+      <div data-tour="metrics-bar">
+        <MetricsBar metrics={metrics}/>
+      </div>
 
       {/* Main 3-column layout */}
       <div style={{ flex:1, display:'flex', overflow:'hidden', minHeight:0 }}>
 
         {/* Left: controls */}
-        <aside style={{ width:210, flexShrink:0, borderRight:'1px solid var(--border)', padding:'14px', overflowY:'auto', background:'var(--bg-surface)' }}>
+        <aside data-tour="control-panel" style={{ width:210, flexShrink:0, borderRight:'1px solid var(--border)', padding:'14px', overflowY:'auto', background:'var(--bg-surface)' }}>
           <ControlPanel
             status={status}
             onInit={handleInit}
@@ -320,12 +338,12 @@ export default function App() {
         <main style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', overflow:'hidden' }}>
           <div style={{ flex:1, overflowY:'auto', minHeight:0 }}>
             {centreView === 'grid' ? (
-              <div style={{ padding:'14px' }}>
+              <div data-tour="trust-grid" style={{ padding:'14px' }}>
                 <TrustGrid users={users} onSelectUser={handleSelectUser} selectedUser={selectedUser} realEventsPerRole={status.real_events_per_role} shapChips={shapChips}/>
               </div>
             ) : centreView === 'scorecard' ? (
               <div style={{ overflowY:'auto', height:'100%' }}>
-                <BaselineScorecard results={comparison}/>
+                <BaselineScorecard results={comparison} realLogCount={status.real_log_count}/>
                 {!comparison && !status.comparison_running && (
                   <div style={{ padding:'30px', textAlign:'center', color:'var(--text-dim)', fontFamily:'var(--font-mono)', fontSize:11 }}>
                     Click "Run Analysis" in the left panel to generate the baseline vs adaptive scorecard
@@ -348,7 +366,7 @@ export default function App() {
               </div>
             )}
           </div>
-          <div style={{
+          <div data-tour="detail-panel" style={{
             height:240, minHeight:150, maxHeight:'60vh', flexShrink:0,
             resize:'vertical', overflow:'auto',
             borderTop:'1px solid var(--border)', padding:'14px', background:'var(--bg-surface)',
@@ -358,7 +376,7 @@ export default function App() {
         </main>
 
         {/* Right: alerts */}
-        <aside style={{
+        <aside data-tour="alerts" style={{
           width:280, minWidth:200, maxWidth:520, flexShrink:0,
           resize:'horizontal', overflow:'auto',
           borderLeft:'1px solid var(--border)', padding:'14px', background:'var(--bg-surface)',
@@ -371,6 +389,8 @@ export default function App() {
           />
         </aside>
       </div>
+
+      <GuidedTour stepIndex={tourStep} onNext={tourNext} onBack={tourBack} onClose={tourClose}/>
 
       {showAllAlerts && (
         <AlertsExplorer
