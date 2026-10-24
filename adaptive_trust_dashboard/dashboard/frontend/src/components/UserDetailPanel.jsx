@@ -123,6 +123,7 @@ export default function UserDetailPanel({ user, history, ucb, onClose }) {
           Best arm so far: <span style={{ color:'#10b981' }}>λ={ucb.best_arm.lambda_.toFixed(2)} ρ={ucb.best_arm.rho.toFixed(2)}</span>
           {' '}(reward {ucb.best_arm.mean_reward.toFixed(3)}) · current:{' '}
           <span style={{ color:'#c4b5fd' }}>λ={user.lambda_?.toFixed(2)} ρ={user.rho?.toFixed(2)}</span>
+          <span style={{ color:'var(--text-dim)' }}> · hover a bar for its exact λ/ρ</span>
         </div>
       )}
 
@@ -131,9 +132,8 @@ export default function UserDetailPanel({ user, history, ucb, onClose }) {
         {chartMode === 'arms' ? (
           armData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={armData} margin={{ top:4, right:4, left:-20, bottom:18 }}>
-                <XAxis dataKey="label" tick={{ fontSize:7, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}
-                  angle={-40} textAnchor="end" interval={0} height={36}/>
+              <BarChart data={armData} margin={{ top:4, right:4, left:-20, bottom:4 }}>
+                <XAxis dataKey="label" tick={false} tickLine={false} axisLine={{ stroke:'var(--border)' }}/>
                 <YAxis tick={{ fontSize:8, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}/>
                 <Tooltip content={<ArmsTooltip />}/>
                 <ReferenceLine y={0} stroke="var(--border)" strokeWidth={1}/>
