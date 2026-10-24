@@ -36,12 +36,22 @@ function StatCard({ row, meta }) {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 700, color: c, lineHeight: 1 }}>
-            {(row.detection_rate * 100).toFixed(1)}<span style={{ fontSize: 12 }}>%</span>
+        <div style={{ display: 'flex', gap: 20 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 700, color: c, lineHeight: 1 }}>
+              {row.auc?.toFixed(3) ?? '—'}
+            </div>
+            <div style={{ fontSize: 9, color: 'var(--text-sec)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+              AUC
+            </div>
           </div>
-          <div style={{ fontSize: 9, color: 'var(--text-sec)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
-            Detection rate
+          <div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 700, color: c, lineHeight: 1 }}>
+              {(row.detection_rate * 100).toFixed(1)}<span style={{ fontSize: 12 }}>%</span>
+            </div>
+            <div style={{ fontSize: 9, color: 'var(--text-sec)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+              Detection rate
+            </div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 18 }}>
@@ -76,6 +86,7 @@ export default function BaselineScorecard({ results, realLogCount }) {
   const detectionDelta = (c.detection_rate - b.detection_rate) * 100
   const fprReductionPct = b.fpr_per_10k > 0 ? ((b.fpr_per_10k - c.fpr_per_10k) / b.fpr_per_10k) * 100 : 0
   const precisionDeltaPts = (c.precision - b.precision) * 100
+  const aucDelta = (c.auc ?? 0) - (b.auc ?? 0)
 
   return (
     <div style={{ padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -103,6 +114,8 @@ export default function BaselineScorecard({ results, realLogCount }) {
           Key finding — C vs B
         </div>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: 'var(--text-pri)', lineHeight: 1.5 }}>
+          AUC {aucDelta >= 0 ? '+' : ''}{aucDelta.toFixed(3)}
+          {' · '}
           {Math.abs(detectionDelta) < 0.1 ? 'Same detection rate' : `Detection rate ${detectionDelta >= 0 ? '+' : ''}${detectionDelta.toFixed(1)} pts`}
           {' · '}
           <span style={{ color: fprReductionPct > 0 ? '#10b981' : '#ef4444' }}>
