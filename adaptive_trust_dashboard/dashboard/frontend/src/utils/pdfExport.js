@@ -34,6 +34,7 @@ export function exportComparisonPDF(results, { realLogCount } = {}) {
   const [a, b, c] = results.summary
   const fprReductionPct = b.fpr_per_10k > 0 ? ((b.fpr_per_10k - c.fpr_per_10k) / b.fpr_per_10k) * 100 : 0
   const detectionDelta = (c.detection_rate - b.detection_rate) * 100
+  const aucDelta = (c.auc ?? 0) - (b.auc ?? 0)
   const precisionDeltaPts = (c.precision - b.precision) * 100
 
   doc.setFillColor(243, 238, 255)
@@ -44,6 +45,7 @@ export function exportComparisonPDF(results, { realLogCount } = {}) {
   doc.setFont('courier', 'normal')
   doc.setFontSize(9)
   const findingLine =
+    `AUC ${aucDelta >= 0 ? '+' : ''}${aucDelta.toFixed(3)}  ·  ` +
     (Math.abs(detectionDelta) < 0.1 ? 'Same detection rate' : `Detection rate ${detectionDelta >= 0 ? '+' : ''}${detectionDelta.toFixed(1)} pts`) +
     `  ·  ${fprReductionPct > 0 ? '-' : '+'}${Math.abs(fprReductionPct).toFixed(1)}% false positives` +
     `  ·  precision ${precisionDeltaPts >= 0 ? '+' : ''}${precisionDeltaPts.toFixed(1)} pts`
@@ -58,9 +60,10 @@ export function exportComparisonPDF(results, { realLogCount } = {}) {
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
-    head: [['Condition', 'Detection rate', 'FPR / 10K', 'Precision']],
+    head: [['Condition', 'AUC', 'Detection rate', 'FPR / 10K', 'Precision']],
     body: results.summary.map((row, i) => [
       COND_LABEL[['A', 'B', 'C'][i]] || `Condition ${i}`,
+      row.auc != null ? row.auc.toFixed(3) : '\u2014',
       `${(row.detection_rate * 100).toFixed(1)}%`,
       `${row.fpr_per_10k}`,
       `${(row.precision * 100).toFixed(1)}%`,
