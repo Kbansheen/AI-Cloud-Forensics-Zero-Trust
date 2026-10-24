@@ -179,7 +179,7 @@ export default function ComparisonPanel({ results, running, log = [] }) {
         <table style={{ width:'100%', borderCollapse:'collapse', fontSize:10 }}>
           <thead>
             <tr style={{ borderBottom:'1px solid var(--border)' }}>
-              {['Condition','Detection rate','FPR / 10K','Precision'].map(h => (
+              {['Condition','AUC','Detection rate','FPR / 10K','Precision'].map(h => (
                 <th key={h} style={{ padding:'4px 8px', textAlign:'left', color:'var(--text-sec)', fontSize:9, fontFamily:'var(--font-mono)', fontWeight:600 }}>{h}</th>
               ))}
             </tr>
@@ -188,6 +188,7 @@ export default function ComparisonPanel({ results, running, log = [] }) {
             {summary.map((row, i) => (
               <tr key={i} style={{ borderBottom:'1px solid var(--border)' }}>
                 <td style={{ padding:'7px 8px', color:COND_COLOUR[i], fontSize:9, fontFamily:'var(--font-mono)' }}>{COND_LABELS[i]}</td>
+                <td style={{ padding:'7px 8px', fontFamily:'var(--font-mono)', fontWeight:700, color:COND_COLOUR[i] }}>{row.auc?.toFixed(3) ?? '—'}</td>
                 <td style={{ padding:'7px 8px', fontFamily:'var(--font-mono)', fontWeight:700, color:COND_COLOUR[i] }}>{(row.detection_rate*100).toFixed(1)}%</td>
                 <td style={{ padding:'7px 8px', fontFamily:'var(--font-mono)', color:'var(--text-sec)' }}>{row.fpr_per_10k}</td>
                 <td style={{ padding:'7px 8px', fontFamily:'var(--font-mono)', color:'var(--text-sec)' }}>{(row.precision*100).toFixed(1)}%</td>
