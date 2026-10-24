@@ -17,6 +17,7 @@ Results are statistically equivalent to the full 50-user/90-day run.
 """
 
 import numpy as np
+from scipy.stats import rankdata
 from simulator import CloudTrailSimulator, MITRE_SCENARIOS
 from anomaly_scorer import AnomalyScorer
 from feature_encoder import get_user_id, get_action
@@ -24,6 +25,29 @@ from cloudtrail_loader import load_cloudtrail_records
 from trust_engine import TrustEngineManager
 from adaptive_params import UCBParamLearner, compute_reward
 from adversary import PacingAdversary, AdversaryConfig
+
+
+def _session_auc(scores: list, labels: list) -> float:
+    """
+    Session-level AUC-ROC (Mann-Whitney U / rank-sum form), matching
+    Paper 1 Section 4.3's definition — the probability that a randomly
+    chosen attack event scores higher than a randomly chosen benign
+    event. Rank-sum form is O(n log n) and tie-aware (scipy.rankdata
+    averages ranks across ties), unlike the naive O(n_pos * n_neg)
+    pairwise-comparison version used elsewhere in this codebase — this
+    pipeline can see tens of thousands of events per condition, so the
+    pairwise form would be far too slow here.
+    """
+    scores = np.asarray(scores, dtype=np.float64)
+    labels = np.asarray(labels, dtype=np.int64)
+    n_pos = int(labels.sum())
+    n_neg = int(len(labels) - n_pos)
+    if n_pos == 0 or n_neg == 0:
+        return 0.5
+    ranks        = rankdata(scores)
+    sum_ranks_pos = ranks[labels == 1].sum()
+    auc = (sum_ranks_pos - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)
+    return round(float(auc), 4)
 
 
 SCENARIO_LABELS = {
@@ -56,6 +80,8 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
     tp = fp = fn = 0
     benign_total = 0
     events_per_hour = 1.0
+    auc_scores: list = []
+    auc_labels: list = []
 
     if on_progress:
         on_progress(f"[{condition_label}] Generating {days}-day event trace…")
@@ -119,6 +145,9 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
                 "idx": idx, "trust": res["trust"], "zone": zone,
             })
 
+        auc_scores.append(s)
+        auc_labels.append(1 if is_atk else 0)
+
         if not is_atk:
             benign_total += 1
             if zone_changed and restricted:
@@ -155,11 +184,13 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
     det_total    = sum(1 for v in detection_per_sc.values() if v == 1)
     det_possible = sum(1 for v in detection_per_sc.values() if v is not None)
     fpr_per_10k  = round(fp / max(1, benign_total) * 10_000, 2)
+    auc          = _session_auc(auc_scores, auc_labels)
 
     result = {
         "detection_rate":   round(det_total / max(1, det_possible), 4),
         "fpr_per_10k":      fpr_per_10k,
         "precision":        round(tp / max(1, tp + fp), 4),
+        "auc":              auc,
         "detection_per_sc": detection_per_sc,
         "mttd_per_sc":      mttd_per_sc,
         "attack_start":     attack_start,
@@ -168,7 +199,8 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
 
     if on_progress:
         on_progress(
-            f"[{condition_label}] complete — detection={result['detection_rate']*100:.1f}% "
+            f"[{condition_label}] complete — AUC={result['auc']:.3f} "
+            f"detection={result['detection_rate']*100:.1f}% "
             f"FPR/10K={result['fpr_per_10k']} precision={result['precision']*100:.1f}%"
         )
 
@@ -267,11 +299,11 @@ def run_comparison(n_users: int = 20, days: int = 30, seed: int = 42,
     return {
         "summary": [
             {"label": "A — Static λ/ρ, no adversary (Paper 1 baseline)",
-             **{k: cond_a[k] for k in ("detection_rate","fpr_per_10k","precision")}},
+             **{k: cond_a[k] for k in ("detection_rate","fpr_per_10k","precision","auc")}},
             {"label": "B — Static λ/ρ + pacing adversary (evasion attack)",
-             **{k: cond_b[k] for k in ("detection_rate","fpr_per_10k","precision")}},
+             **{k: cond_b[k] for k in ("detection_rate","fpr_per_10k","precision","auc")}},
             {"label": "C — UCB adaptive λ/ρ + pacing adversary (Paper 2)",
-             **{k: cond_c[k] for k in ("detection_rate","fpr_per_10k","precision")}},
+             **{k: cond_c[k] for k in ("detection_rate","fpr_per_10k","precision","auc")}},
         ],
         "table_detection": table_detection,
         "table_mttd":      table_mttd,
