@@ -207,7 +207,9 @@ class TrustEngineManager:
             "adversary_active": adversary_active,
         }
 
-        if new_zone in ("quarantine", "read_only") and old_zone not in ("quarantine", "read_only"):
+        entered_restricted      = new_zone in ("quarantine", "read_only") and old_zone not in ("quarantine", "read_only")
+        escalated_to_quarantine = new_zone == "quarantine" and old_zone == "read_only"
+        if entered_restricted or escalated_to_quarantine:
             alert = {
                 "alert_id":     f"alert_{len(self._alerts):04d}",
                 "user_id":      uid,
