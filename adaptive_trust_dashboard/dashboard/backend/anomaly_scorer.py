@@ -26,7 +26,8 @@ from simulator import ROLE_ACTIONS
 
 NORMAL_SCORE_CAP    = 0.20   # max score for IF within baseline distribution
 VELOCITY_WINDOW     = 100    # rolling window size (events)
-VELOCITY_THRESHOLD  = 5.0    # trigger if action count > threshold x baseline
+VELOCITY_THRESHOLD  = 2.0    # trigger if action count > threshold x baseline
+VELOCITY_PERCENTILE = 95     # percentile of historical per-window burst size used as baseline
 
 
 class AnomalyScorer:
@@ -78,14 +79,33 @@ class AnomalyScorer:
             self._p95 = self._p5 + 1e-6
 
         # ── Velocity baseline ─────────────────────────────────────────────────
-        # Count how often each action appears in baseline
-        # Scale to expected count per VELOCITY_WINDOW events
+        # Calibrate each action's "expected" per-VELOCITY_WINDOW count from the
+        # LARGEST burst already seen for that action in clean baseline data
+        # (95th percentile across overlapping rolling windows) — not a flat
+        # per-event average. A flat average badly under-represents legitimate
+        # bursty work (e.g. a devops user making 15-20 CloudFormation calls in
+        # one troubleshooting session, then nothing for hours): averaged over
+        # the full 14-day baseline that burst looks artificially rare, so any
+        # future, equally-normal burst of similar size trips the velocity
+        # alarm. Calibrating against the user's own historical burst sizes
+        # fixes that without losing the ability to catch genuinely abnormal
+        # spikes well beyond anything seen during clean behaviour.
         from collections import Counter
-        action_counts = Counter(get_action(e) for e in baseline_events)
-        n = len(baseline_events)
-        for action, count in action_counts.items():
-            # Expected occurrences in a window of VELOCITY_WINDOW events
-            self._action_expected[action] = (count / n) * VELOCITY_WINDOW
+        action_sequence = [get_action(e) for e in baseline_events]
+        n = len(action_sequence)
+        window_counts: dict[str, list[int]] = {}
+        stride = max(1, VELOCITY_WINDOW // 4)  # overlapping windows, 25% stride
+        for start in range(0, max(1, n - VELOCITY_WINDOW + 1), stride):
+            window = action_sequence[start:start + VELOCITY_WINDOW]
+            for action, c in Counter(window).items():
+                window_counts.setdefault(action, []).append(c)
+        # Cover the tail end too, in case n < VELOCITY_WINDOW or doesn't divide evenly
+        if n > 0:
+            for action, c in Counter(action_sequence[max(0, n - VELOCITY_WINDOW):]).items():
+                window_counts.setdefault(action, []).append(c)
+
+        for action, counts_list in window_counts.items():
+            self._action_expected[action] = float(np.percentile(counts_list, VELOCITY_PERCENTILE))
 
         self._fitted = True
         return self
