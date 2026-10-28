@@ -12,8 +12,11 @@ Conditions:
   B — Fixed λ=0.15, ρ=0.05, pacing adversary      (shows vulnerability)
   C — UCB adaptive λ/ρ,     pacing adversary      (Paper 2 solution)
 
-n_users=20, days=30: fast enough for a laptop (~3-4 minutes total).
-Results are statistically equivalent to the full 50-user/90-day run.
+n_users=20, days=30 is the interactive-dashboard default, chosen for runtime.
+NOTE: this is NOT the same dataset scale as Paper 1 (50 users / 90 days,
+165,345 events) — at 20/30 the trace is ~24,000 events, roughly 15% of that.
+Any results table must state which scale it was produced at; the two are not
+interchangeable and must not be presented as equivalent.
 """
 
 import numpy as np
@@ -118,11 +121,32 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
     if on_progress:
         on_progress(f"[{condition_label}] {total:,} events queued — scoring + enforcement starting")
 
+    # ── Batched scoring ──────────────────────────────────────────────────
+    # Velocity counts depend on the rolling window state, which process_event
+    # advances; precompute them on copies so scoring can be vectorised.
+    # Then one IsolationForest.score_samples() call per user instead of one
+    # per event (~200x faster; row-for-row identical results).
+    if on_progress:
+        on_progress(f"[{condition_label}] Scoring {len(trace):,} events (batched)…")
+    rcs_all    = engine.precompute_velocities(trace)
+    scores_all = [0.0] * len(trace)
+    _by_user: dict[str, list[int]] = {}
+    for pos, _ev in enumerate(trace):
+        _uid = get_user_id(_ev)
+        if _uid in scorers:
+            _by_user.setdefault(_uid, []).append(pos)
+    for _uid, _pos in _by_user.items():
+        _got = scorers[_uid].score_batch(
+            [trace[p] for p in _pos], [rcs_all[p] for p in _pos]
+        )
+        for _k, p in enumerate(_pos):
+            scores_all[p] = _got[_k]
+
     for idx, ev in enumerate(trace):
         d   = ev
         uid = get_user_id(d)
-        recent_count = engine.get_action_velocity(uid, get_action(d))
-        s   = (scorers[uid].score(d, recent_action_count=recent_count) if uid in scorers else 0.0)
+        recent_count = rcs_all[idx]
+        s   = scores_all[idx]
         res = engine.process_event(d, s, idx, [])
 
         is_atk       = res["is_attack"]

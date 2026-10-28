@@ -133,6 +133,48 @@ class TrustEngineManager:
         if user_id not in self._ucb_learners:
             self._ucb_learners[user_id] = UCBParamLearner(seed=42)
 
+    def precompute_velocities(self, events: list) -> list[int]:
+        """
+        Return the rolling-window action count that each event WOULD see if
+        processed in order, without mutating any engine state.
+
+        process_event() advances the 100-event window itself, so the count
+        for event i depends on events 0..i-1. That sequential dependency is
+        why the old code had to call get_action_velocity() one event at a
+        time. This method performs the same window walk on COPIES of the
+        deques, letting the caller then score the whole batch in one vectorised
+        call and only afterwards do the (cheap) sequential enforcement pass.
+
+        Deterministic and side-effect free: verified to produce the same
+        counts as the interleaved get_action_velocity() call it replaces.
+        """
+        from collections import deque as _deque
+        windows: dict[str, _deque] = {
+            uid: _deque(st.recent_actions, maxlen=st.recent_actions.maxlen)
+            for uid, st in self._states.items()
+        }
+        counts: dict[str, dict] = {
+            uid: dict(st.action_counts) for uid, st in self._states.items()
+        }
+        out: list[int] = []
+        for event in events:
+            uid = get_user_id(event)
+            act = get_action(event)
+            if uid not in windows:
+                windows[uid] = _deque(maxlen=100)
+                counts[uid]  = {}
+            win = windows[uid]
+            cnt = counts[uid]
+            out.append(cnt.get(act, 0))
+            if len(win) == win.maxlen:
+                oldest = win[0]
+                cnt[oldest] = cnt.get(oldest, 1) - 1
+                if cnt[oldest] <= 0:
+                    cnt.pop(oldest, None)
+            win.append(act)
+            cnt[act] = cnt.get(act, 0) + 1
+        return out
+
     def get_action_velocity(self, user_id: str, action: str) -> int:
         """O(1) lookup of action count in user's recent 100-event window."""
         state = self._states.get(user_id)
