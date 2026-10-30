@@ -179,6 +179,15 @@ async def broadcast(payload: dict):
 
 # ── Request schemas ───────────────────────────────────────────────────────────
 
+# ── Evaluation scale ──────────────────────────────────────────────────────────
+# Both the live dashboard and the A/B/C comparison now run at Paper 1's scale
+# (50 identities / 90 days ≈ 180k events). One number, one place — so the live
+# view and the analysis report can never disagree about what was measured.
+# Run all ≈ 60 s and Run Analysis ≈ 60 s at this scale on a 2-core machine.
+DASHBOARD_USERS = 50
+DASHBOARD_DAYS  = 90
+
+
 class StepRequest(BaseModel):
     n_events: int = 100
 
@@ -206,7 +215,7 @@ def status():
         "comparison_running": state.comparison_running,
         "real_log_count":     state.real_log_count,
         "real_events_per_role": state.real_events_per_role,
-        "total_alerts":       len(state.engine.get_alerts(200)),
+        "total_alerts":       state.engine.alert_total,
         "timestamp":          datetime.utcnow().isoformat(),
     }
 
@@ -228,7 +237,7 @@ async def init_simulation():
     state.real_log_count       = 0
     state.real_events_per_role = {}
     state.engine               = TrustEngineManager(use_adaptive_ucb=True)
-    state.sim                  = CloudTrailSimulator(n_users=20, seed=42)
+    state.sim                  = CloudTrailSimulator(n_users=DASHBOARD_USERS, seed=42)
 
     for user in state.sim.users:
         state.engine.register_user(user.user_id, user.role)
@@ -268,7 +277,7 @@ async def init_simulation():
         state.scorers[user.user_id] = scorer
 
     # ── Generate 30-day trace in real CloudTrail format ───────────────────
-    raw              = state.sim.generate_full_trace(days=30)
+    raw              = state.sim.generate_full_trace(days=DASHBOARD_DAYS)
     state.all_events = [e.to_cloudtrail_dict() for e in raw]
 
     for user in state.sim.users:
@@ -306,7 +315,8 @@ def _score_range(all_events, start, end, engine, scorers):
     2. Events are grouped by user and passed to score_batch(), which makes ONE
        IsolationForest.score_samples() call per user instead of one per event.
        The per-call overhead (~4 ms) was the single dominant cost of a run:
-       at 20 users / 30 days it accounted for ~95 s of a ~190 s run.
+       at 20 users / 30 days it accounted for ~95 s of a ~190 s run
+       (before the batched-scoring change in anomaly_scorer.score_batch).
 
     Returns (scores, recent_action_counts) — both positionally aligned with
     [start, end).
@@ -411,7 +421,7 @@ async def _run_full_bg():
         state.processed_idx = end
         _refresh_metrics()
         print(f"Processed {state.processed_idx}/{len(state.all_events)} | "
-              f"Alerts: {len(state.engine.get_alerts(200))} | "
+              f"Alerts: {state.engine.alert_total} | "
               f"AUC: {state.metrics.get('auc', '—')}")
         await broadcast({
             "type":           "progress",
@@ -689,7 +699,8 @@ async def _comparison_bg():
     try:
         result = await loop.run_in_executor(
             None,
-            lambda: run_comparison(n_users=20, days=30, seed=42, on_progress=on_progress),
+            lambda: run_comparison(n_users=DASHBOARD_USERS, days=DASHBOARD_DAYS,
+                                  seed=42, on_progress=on_progress),
         )
         state.comparison_results = result
         await broadcast({"type": "comparison_done", "summary": result["summary"]})
@@ -744,7 +755,7 @@ def _refresh_metrics():
     state.metrics = {
         **base,
         "total_events":       state.processed_idx,
-        "total_alerts":       len(state.engine.get_alerts(200)),
+        "total_alerts":       state.engine.alert_total,
         "scenarios_detected": len(state.scenario_detect),
         "scenarios_total":    len(state.scenario_start),
         "adaptive_ucb":       state.engine._use_adaptive_ucb,

@@ -99,7 +99,7 @@ export default function App() {
           api('/api/comparison/log').then(r => setComparisonLog(r.log || [])).catch(() => {})
         }
         if (s.processed_events > 0 && alerts.length === 0) {
-          api('/api/alerts?limit=500').then(a => setAlerts(prev => mergeAlerts(prev, a))).catch(() => {})
+          api('/api/alerts?limit=2000').then(a => setAlerts(prev => mergeAlerts(prev, a))).catch(() => {})
         }
       } catch {}
     }
@@ -142,7 +142,7 @@ export default function App() {
         body:JSON.stringify({ n_events:n })
       })
       const [s, u, a, m] = await Promise.all([
-        api('/api/status'), api('/api/users'), api('/api/alerts?limit=500'), api('/api/metrics')
+        api('/api/status'), api('/api/users'), api('/api/alerts?limit=2000'), api('/api/metrics')
       ])
       setStatus(s); setUsers(u); setAlerts(prev => mergeAlerts(prev, a)); setMetrics(m)
     } catch (e) { showToast('Step failed: ' + e.message, 'danger') }
@@ -160,7 +160,7 @@ export default function App() {
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({ scenario })
       })
-      const [u, a] = await Promise.all([api('/api/users'), api('/api/alerts?limit=500')])
+      const [u, a] = await Promise.all([api('/api/users'), api('/api/alerts?limit=2000')])
       setUsers(u); setAlerts(prev => mergeAlerts(prev, a))
     } catch (e) { showToast('Attack failed: ' + e.message, 'danger') }
   }

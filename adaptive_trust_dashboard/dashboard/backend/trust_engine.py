@@ -14,11 +14,19 @@ from datetime import datetime
 from typing import Optional
 from collections import deque
 import numpy as np
+from scipy.stats import rankdata
 
 from adaptive_params import UCBParamLearner, compute_reward
 from adversary import PacingAdversary, AdversaryConfig
 from feature_encoder import get_user_id, get_action, get_source_ip
 
+
+# How many alerts to RETAIN for the UI (not how many are counted).
+# Previously this was 200 and, at larger scales, silently truncated the
+# alert history while the UI reported the truncated length as the session
+# total.  All alerts are counted (see TrustEngineManager.alert_total);
+# this only bounds how many are kept in memory for the feed/explorer.
+MAX_STORED_ALERTS = 5000
 
 ZONE_COLOURS = {
     "normal_access": "#10b981",
@@ -113,6 +121,10 @@ class TrustEngineManager:
         self._use_adaptive_ucb = use_adaptive_ucb
         self._adversary: Optional[PacingAdversary]     = None
         self._alerts: list[dict] = []
+        # Monotonic count of every alert ever raised this session. Used both
+        # for the displayed total and for alert_id, so IDs stay unique even
+        # after the stored list is trimmed.
+        self._alert_total: int = 0
 
     def set_adaptive_mode(self, enabled: bool):
         self._use_adaptive_ucb = enabled
@@ -253,7 +265,7 @@ class TrustEngineManager:
         escalated_to_quarantine = new_zone == "quarantine" and old_zone == "read_only"
         if entered_restricted or escalated_to_quarantine:
             alert = {
-                "alert_id":     f"alert_{len(self._alerts):04d}",
+                "alert_id":     f"alert_{self._alert_total:05d}",
                 "user_id":      uid,
                 "role":         event.get("role", "unknown"),
                 "zone":         new_zone,
@@ -267,9 +279,10 @@ class TrustEngineManager:
                 "lambda_":      round(lam, 3),
                 "rho":          round(rho, 3),
             }
+            self._alert_total += 1
             self._alerts.append(alert)
-            if len(self._alerts) > 200:
-                self._alerts = self._alerts[-200:]
+            if len(self._alerts) > MAX_STORED_ALERTS:
+                self._alerts = self._alerts[-MAX_STORED_ALERTS:]
 
         return result
 
@@ -279,6 +292,11 @@ class TrustEngineManager:
 
     def get_all_states(self) -> list[dict]:
         return [s.to_dict() for s in self._states.values()]
+
+    @property
+    def alert_total(self) -> int:
+        """Total alerts raised this session (never truncated)."""
+        return self._alert_total
 
     def get_alerts(self, limit: int = 50) -> list[dict]:
         return list(reversed(self._alerts[-limit:]))
@@ -316,19 +334,46 @@ class TrustEngineManager:
         return out
 
     def compute_metrics(self, labelled_events: list) -> dict:
+        """
+        Live metrics bar: AUC, precision, FPR at threshold T=0.60.
+
+        AUC is computed with a rank-sum (Mann-Whitney) formula, tie-aware via
+        scipy.rankdata.  The previous implementation was
+            sum(p > n for p in pos for n in neg)
+        which is O(positives x negatives) and is called after every batch.  At
+        50 users / 90 days that is ~51.7M comparisons per call and ~180 calls,
+        costing ~191 s of a ~251 s run.  Rank-sum is O(n log n) and takes
+        ~35 ms on the same 180k events.
+
+        Note on the value: rank-sum credits tied scores with 0.5, while the old
+        strict `p > n` comparison credited them 0.0, so the displayed AUC can
+        differ in the third decimal.  comparison.py (the paper's A/B/C table)
+        already used rank-sum and is unaffected by this change.
+        """
         if not labelled_events:
             return {}
-        scores = [s for _, s, _ in labelled_events]
-        labels = [int(a) for _, _, a in labelled_events]
-        if sum(labels) == 0:
+
+        n = len(labelled_events)
+        scores = np.fromiter((s for _, s, _ in labelled_events), dtype=np.float64, count=n)
+        labels = np.fromiter((1 if a else 0 for _, _, a in labelled_events), dtype=np.int64, count=n)
+
+        n_pos = int(labels.sum())
+        n_neg = n - n_pos
+        if n_pos == 0:
             return {"auc": 0.5, "precision": 0.0, "fpr": 0.0}
-        pos = [scores[i] for i, l in enumerate(labels) if l == 1]
-        neg = [scores[i] for i, l in enumerate(labels) if l == 0]
-        auc = sum(p > n for p in pos for n in neg) / max(1, len(pos) * len(neg))
+        if n_neg == 0:
+            auc = 0.5
+        else:
+            ranks = rankdata(scores)
+            pos_mask = labels == 1
+            auc = float((ranks[pos_mask].sum() - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg))
+
         threshold = 0.60
-        tp = sum(1 for s, l in zip(scores, labels) if s >= threshold and l == 1)
-        fp = sum(1 for s, l in zip(scores, labels) if s >= threshold and l == 0)
-        tn = sum(1 for s, l in zip(scores, labels) if s < threshold and l == 0)
+        pos_mask = labels == 1
+        above    = scores >= threshold
+        tp = int(np.count_nonzero(above & pos_mask))
+        fp = int(np.count_nonzero(above & ~pos_mask))
+        tn = int(np.count_nonzero(~above & ~pos_mask))
         return {
             "auc":       round(auc, 4),
             "precision": round(tp / max(1, tp + fp), 4),
