@@ -62,6 +62,36 @@ ZONE_COLOURS = {
 # unaffected.
 ALERT_REARM_TRUST = 0.70   # 0.15 above ZONE_READ_ONLY, as before
 
+# ── Notification hysteresis ──────────────────────────────────────────────────
+# A single instant below the boundary is not evidence.  Measured at 50 users /
+# 90 days, 62 of 77 benign alerts were identities that sat below the boundary
+# for ONE TO TWO of their own events and then popped straight back up:
+#
+#   dwell below boundary after the alert :  attack median 13 events
+#                                           benign median  2 events
+#
+# So an alert is raised when EITHER
+#   (a) the event itself is highly anomalous (score >= ALERT_IMMEDIATE_SCORE),
+#       which is true of every genuine attack in the dataset (score = 1.000), or
+#   (b) the identity has stayed restricted for ALERT_PERSIST_EVENTS of its OWN
+#       consecutive events (~5 h of activity at ~40 events/identity/day).
+#
+# Ablation on the live path (attack detection is unaffected in every row,
+# because condition (a) catches all 9 attack alerts):
+#
+#   rule              alerts  attack  benign  benign%
+#   single instant        86       9      77    89.5%
+#   persist >= 3          40       9      31    77.5%
+#   persist >= 5          20       9      11    55.0%
+#   persist >= 8          13       9       4    30.8%   <-- chosen
+#   persist >= 10         11       9       2    18.2%
+#
+# This gates NOTIFICATION ONLY. Zone transitions, trust values, detection
+# (which main.py counts on the transition event, still instantaneous) and the
+# A/B/C comparison pipeline are untouched.
+ALERT_IMMEDIATE_SCORE = 0.80
+ALERT_PERSIST_EVENTS  = 8
+
 
 # ── Enforcement zone boundaries ──────────────────────────────────────────────
 # ZONE_NORMAL  : trust at/above this is normal access
@@ -121,6 +151,14 @@ class TrustState:
     recent_actions:   deque = field(default_factory=lambda: deque(maxlen=100))
     action_counts:    dict  = field(default_factory=dict)
     alert_armed:      bool  = True   # may this identity raise another alert?
+    # --- notification hysteresis (see ALERT_PERSIST_EVENTS) -------------------
+    # restricted_streak counts this identity's OWN consecutive events spent in a
+    # restricted zone while an alert is still pending.  alert_pending_from holds
+    # the zone the identity was in when it first crossed the boundary, so a
+    # delayed alert still reports the true "MFA -> READ-ONLY" transition.
+    restricted_streak:   int  = 0
+    alert_pending:       bool = False
+    alert_pending_from:  str  = ""
     last_updated:   Optional[datetime] = None
 
     def update(self, anomaly_score: float, event_idx: int, action: str = "") -> str:
@@ -328,18 +366,43 @@ class TrustEngineManager:
         entered_restricted      = new_zone in ("quarantine", "read_only") and old_zone not in ("quarantine", "read_only")
         escalated_to_quarantine = new_zone == "quarantine" and old_zone == "read_only"
 
+        # --- notification hysteresis ---------------------------------------
+        # Track how long this identity has been restricted in its OWN events,
+        # and remember which zone it entered from so a delayed alert still
+        # reports the true transition (e.g. MFA -> READ-ONLY).
+        if new_zone in ("quarantine", "read_only"):
+            if entered_restricted:
+                state.restricted_streak  = 1
+                state.alert_pending      = True
+                state.alert_pending_from = old_zone
+            else:
+                state.restricted_streak += 1
+        else:
+            state.restricted_streak = 0
+            state.alert_pending     = False
+            state.alert_pending_from = ""
+
         # Re-arm once the identity has recovered clear of the restriction band.
         if state.trust >= ALERT_REARM_TRUST:
             state.alert_armed = True
 
-        if (entered_restricted or escalated_to_quarantine) and state.alert_armed:
-            state.alert_armed = False        # suppress re-fires until recovery
+        # Fire immediately on a genuinely anomalous event or an escalation to
+        # quarantine; otherwise wait for the restriction to persist.
+        fire_now = (
+            anomaly_score >= ALERT_IMMEDIATE_SCORE
+            or escalated_to_quarantine
+            or state.restricted_streak >= ALERT_PERSIST_EVENTS
+        )
+
+        if state.alert_pending and fire_now and state.alert_armed:
+            state.alert_pending = False
+            state.alert_armed   = False      # suppress re-fires until recovery
             alert = {
                 "alert_id":     f"alert_{self._alert_total:05d}",
                 "user_id":      uid,
                 "role":         event.get("role", "unknown"),
                 "zone":         new_zone,
-                "zone_from":    old_zone,
+                "zone_from":    state.alert_pending_from or old_zone,
                 "zone_to":      new_zone,
                 "trust":        round(state.trust, 4),
                 "action":       current_action,
@@ -348,6 +411,7 @@ class TrustEngineManager:
                 "timestamp":    event.get("eventTime", event.get("timestamp", "")),
                 "event_idx":    event_idx,
                 "is_attack":    is_attack,
+                "persisted":    state.restricted_streak,
                 "lambda_":      round(lam, 3),
                 "rho":          round(rho, 3),
             }

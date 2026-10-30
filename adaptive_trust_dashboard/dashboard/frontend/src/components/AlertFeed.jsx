@@ -42,6 +42,11 @@ export function AlertCard({ alert, onExplain }) {
 
       <div style={{ fontSize: 11, color: 'var(--text-sec)', fontFamily: 'var(--font-mono)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {alert.role} · T={alert.trust?.toFixed(3)} · score={alert.anomaly_score?.toFixed(3)}
+        {/* Why this alert fired: either the event itself scored high, or the
+            identity stayed below the boundary for N of its own events. */}
+        {alert.anomaly_score >= 0.80
+          ? ' · high-score event'
+          : (alert.persisted > 1 ? ` · held ${alert.persisted} events` : '')}
       </div>
 
       <div style={{ fontSize: 12, color: 'var(--text-pri)', fontFamily: 'var(--font-mono)', marginBottom: alert.reasons?.length ? 6 : 0,
