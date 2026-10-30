@@ -2,14 +2,14 @@ import React from 'react'
 
 // Labels state WHAT is measured, because several different definitions of
 // "FPR" and "precision" exist in this project and they are not interchangeable:
-//   - these are EVENT-level, at the fixed operational threshold score >= 0.60
-//   - the published A/B/C table is per 10,000 benign events, at T < 0.60
+//   - these are EVENT-level, at the fixed operational threshold score >= 0.55
+//   - the published A/B/C table is per 10,000 benign events, at T < 0.55
 //   - Paper 1's tables are session-level (user-day), post-hoc ROC threshold
 // Mixing them on one screen without saying which is which reads as a contradiction.
 const METRICS = [
   { key:'auc',               label:'AUC (event)',        fmt:v=>v?.toFixed(3)??'—',       note:'Paper 1 baseline: 0.65' },
-  { key:'fpr',               label:'FPR (score ≥ 0.60)', fmt:v=>v?.toFixed(4)??'—',       note:'event-level rate' },
-  { key:'precision',         label:'Precision (≥ 0.60)', fmt:v=>v?.toFixed(3)??'—',       note:'event-level' },
+  { key:'fpr',               label:'FPR (score ≥ 0.55)', fmt:v=>v?.toFixed(4)??'—',       note:'event-level rate' },
+  { key:'precision',         label:'Precision (≥ 0.55)', fmt:v=>v?.toFixed(3)??'—',       note:'event-level' },
   { key:'scenarios_detected',label:'Scenarios',          fmt:v=>`${v??'—'} / 8`,          note:'attack event in restricted zone' },
   { key:'total_alerts',      label:'Alerts',
     fmt:(v,m)=>v?.toLocaleString()??'—',

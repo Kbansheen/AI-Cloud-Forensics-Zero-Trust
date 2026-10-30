@@ -152,11 +152,11 @@ export default function UserDetailPanel({ user, history, ucb, onClose }) {
             {chartMode === 'trust' ? (
               <ComposedChart data={data} margin={{ top:4, right:4, left:-20, bottom:0 }}>
                 <XAxis dataKey="idx" type="number" tickCount={6} domain={['dataMin','dataMax']} tick={{ fontSize:8, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}/>
-                <YAxis domain={[0,1]} ticks={[0,.4,.6,.8,1]} tick={{ fontSize:8, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}/>
+                <YAxis domain={[0,1]} ticks={[0,.4,.55,.8,1]} tick={{ fontSize:8, fill:'var(--text-dim)', fontFamily:'var(--font-mono)' }}/>
                 <Tooltip content={<CustomTooltip />}/>
                 <ReferenceLine y={0.80} stroke="#10b981" strokeDasharray="4 3" strokeWidth={1}
                   label={{ value:'MFA', fill:'#10b981', fontSize:8, position:'insideTopRight' }}/>
-                <ReferenceLine y={0.60} stroke="#f59e0b" strokeDasharray="4 3" strokeWidth={1}
+                <ReferenceLine y={0.55} stroke="#f59e0b" strokeDasharray="4 3" strokeWidth={1}
                   label={{ value:'RO',  fill:'#f59e0b', fontSize:8, position:'insideTopRight' }}/>
                 <ReferenceLine y={0.40} stroke="#ef4444" strokeDasharray="4 3" strokeWidth={1}
                   label={{ value:'QU',  fill:'#ef4444', fontSize:8, position:'insideTopRight' }}/>

@@ -4,7 +4,7 @@ const STATIC_COLOR   = '#f97316'  // matches Condition B elsewhere in the dashbo
 const ADAPTIVE_COLOR = '#7c3aed'  // matches Condition C elsewhere in the dashboard
 
 const THRESH_MFA  = 0.80
-const THRESH_RO   = 0.60
+const THRESH_RO   = 0.55   // must match trust_engine.ZONE_READ_ONLY
 const THRESH_QUAR = 0.40
 
 const CHART_W = 900
@@ -88,7 +88,7 @@ export default function TrajectoryComparison({ trajectories }) {
                 stroke="var(--border)" strokeWidth={0.6} strokeDasharray="3 3" />
         ))}
         <text x={PAD_L+4} y={yScale(THRESH_MFA)-3}  fontSize="8" fill="#f59e0b" fontFamily="var(--font-mono)">MFA 0.80</text>
-        <text x={PAD_L+4} y={yScale(THRESH_RO)-3}   fontSize="8" fill="#f97316" fontFamily="var(--font-mono)">READ-ONLY 0.60</text>
+        <text x={PAD_L+4} y={yScale(THRESH_RO)-3}   fontSize="8" fill="#f97316" fontFamily="var(--font-mono)">READ-ONLY 0.55</text>
         <text x={PAD_L+4} y={yScale(THRESH_QUAR)-3} fontSize="8" fill="#ef4444" fontFamily="var(--font-mono)">QUARANTINE 0.40</text>
 
         {/* Attack-injected marker */}
