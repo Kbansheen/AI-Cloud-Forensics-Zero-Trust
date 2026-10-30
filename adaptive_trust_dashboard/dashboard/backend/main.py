@@ -216,6 +216,8 @@ def status():
         "real_log_count":     state.real_log_count,
         "real_events_per_role": state.real_events_per_role,
         "total_alerts":       state.engine.alert_total,
+        "alerts_attack":      state.engine.alert_split["attack"],
+        "alerts_benign":      state.engine.alert_split["benign"],
         "timestamp":          datetime.utcnow().isoformat(),
     }
 
@@ -362,7 +364,17 @@ async def step_simulation(req: StepRequest):
         result  = state.engine.process_event(ev, s, i, reasons)
         state.labelled_events.append((ev, s, ev.get("is_attack", False)))
         sc = ev.get("attack_scenario")
-        if sc and result["zone"] in ("read_only", "quarantine") and sc not in state.scenario_detect:
+        if sc and ev.get("is_attack") and sc not in state.scenario_start:
+            state.scenario_start[sc] = i
+        # A scenario counts as DETECTED only if the identity TRANSITIONS into a
+        # restricted zone at or after that scenario's first attack event. The old
+        # rule counted any event from a tagged identity while it sat in read_only,
+        # so a victim that had already drifted into read_only BEFORE its attack
+        # began was scored as detected for free. Measured at 50 users / 90 days,
+        # that inflated the headline from 7/8 to 8/8.
+        if (sc and sc in state.scenario_start and sc not in state.scenario_detect
+                and result["zone_changed"]
+                and result["zone"] in ("read_only", "quarantine")):
             state.scenario_detect[sc] = i
         results.append(result)
 
@@ -415,7 +427,11 @@ async def _run_full_bg():
             result  = state.engine.process_event(ev, s, i, reasons)
             state.labelled_events.append((ev, s, ev.get("is_attack", False)))
             sc = ev.get("attack_scenario")
-            if sc and result["zone"] in ("read_only", "quarantine") and sc not in state.scenario_detect:
+            if sc and ev.get("is_attack") and sc not in state.scenario_start:
+                state.scenario_start[sc] = i
+            if (sc and sc in state.scenario_start and sc not in state.scenario_detect
+                    and result["zone_changed"]
+                    and result["zone"] in ("read_only", "quarantine")):
                 state.scenario_detect[sc] = i
 
         state.processed_idx = end
@@ -756,6 +772,8 @@ def _refresh_metrics():
         **base,
         "total_events":       state.processed_idx,
         "total_alerts":       state.engine.alert_total,
+        "alerts_attack":      state.engine.alert_split["attack"],
+        "alerts_benign":      state.engine.alert_split["benign"],
         "scenarios_detected": len(state.scenario_detect),
         "scenarios_total":    len(state.scenario_start),
         "adaptive_ucb":       state.engine._use_adaptive_ucb,

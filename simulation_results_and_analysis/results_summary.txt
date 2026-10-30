@@ -1,9 +1,9 @@
 ========================================================================
-RESEARCH SIMULATION RESULTS & ANALYSIS (PAPER 3 FOUNDATION)
+RESEARCH SIMULATION RESULTS & ANALYSIS (PAPER 1 FOUNDATION)
 ========================================================================
 
 This document summarizes the 90-day simulation results of our continuous 
-trust re-evaluation model (Paper 3) compared against a static baseline, 
+trust re-evaluation model (Paper 1) compared against a static baseline, 
 and explains how these findings directly motivated the full-stack adaptive 
 bandit project (Dashboard Project).
 
@@ -54,9 +54,9 @@ injected 8 distinct MITRE ATT&CK insider threat scenarios.
   create enough cumulative behavioral drift to trigger early decay.
 
 ------------------------------------------------------------------------
-3. DIRECT MOTIVATION FOR THE PAPER 4 FULL-STACK PROJECT
+3. DIRECT MOTIVATION FOR THE FOLLOW-UP (PAPER 2) FULL-STACK PROJECT
 ------------------------------------------------------------------------
-While the Paper 3 simulation proved that continuous decay-recovery math 
+While the Paper 1 simulation proved that continuous decay-recovery math 
 works, it revealed two critical gaps that motivated our current active 
 work:
 

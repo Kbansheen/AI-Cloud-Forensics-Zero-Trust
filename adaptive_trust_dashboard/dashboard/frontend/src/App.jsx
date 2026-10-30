@@ -21,7 +21,7 @@ const api = async (path, opts = {}) => {
 // plain setAlerts(incoming) was silently discarding everything earlier
 // in the session. Dedupe by alert_id, newest first, capped so the list
 // can't grow unbounded across a very long session.
-function mergeAlerts(prev, incoming, cap = 500) {
+function mergeAlerts(prev, incoming, cap = 5000) {
   if (!incoming?.length) return prev
   const seen = new Set(prev.map(a => a.alert_id))
   const fresh = incoming.filter(a => !seen.has(a.alert_id))

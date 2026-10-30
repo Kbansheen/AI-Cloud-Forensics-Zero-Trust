@@ -36,6 +36,33 @@ ZONE_COLOURS = {
 }
 
 
+# ── Trust equilibrium (reference) ────────────────────────────────────────────
+# For a PERSISTENT anomaly score s, Eq. (1) converges to
+#
+#     T* = 1 - (lambda/rho) * s / (1 - s)
+#
+# e.g. with lambda=0.15, rho=0.05 (lambda/rho = 3): s=0.118 parks trust exactly
+# on the read-only boundary (0.60) and s=0.167 on the quarantine boundary (0.40).
+# Inverting: the score that parks an identity on boundary T_b is
+#     s*(T_b) = (1 - T_b) / ((lambda/rho) + (1 - T_b))
+#
+# NOTE: this differs from the expression quoted in the earlier manuscript
+# (rho*(1-s)/(lambda+rho)), which is not a fixed point of Eq. (1) — it evaluates
+# to 0.25 at s=0 whereas Eq. (1) drives trust to 1.0. Use the form above.
+# This is why a benign score distribution centred near s~0.11 leaves users
+# parked on the read-only threshold and chattering across it.
+
+# Re-arm gate for the live alert feed: once an identity has raised an alert, do
+# not raise another until their trust has recovered clearly above the read-only
+# band. Without this, an identity sitting on the T=0.60 equilibrium re-fires on
+# every crossing and the feed fills with routine activity (measured: 551 alerts
+# for 83 genuine attack alerts at 50 users / 90 days).
+# This gates ALERT RECORDING ONLY — enforcement zones, trust values and the
+# A/B/C comparison pipeline (which counts restricted-zone entries itself) are
+# unaffected.
+ALERT_REARM_TRUST = 0.75
+
+
 def enforcement_zone(trust: float) -> str:
     if trust >= 0.80: return "normal_access"
     if trust >= 0.60: return "step_up_mfa"
@@ -59,6 +86,7 @@ class TrustState:
     volatility_window: deque = field(default_factory=lambda: deque(maxlen=500))
     recent_actions:   deque = field(default_factory=lambda: deque(maxlen=100))
     action_counts:    dict  = field(default_factory=dict)
+    alert_armed:      bool  = True   # may this identity raise another alert?
     last_updated:   Optional[datetime] = None
 
     def update(self, anomaly_score: float, event_idx: int, action: str = "") -> str:
@@ -125,6 +153,8 @@ class TrustEngineManager:
         # for the displayed total and for alert_id, so IDs stay unique even
         # after the stored list is trimmed.
         self._alert_total: int = 0
+        self._alert_attack: int = 0   # alerts raised on real (injected) attack events
+        self._alert_benign: int = 0   # alerts raised on benign events
 
     def set_adaptive_mode(self, enabled: bool):
         self._use_adaptive_ucb = enabled
@@ -263,12 +293,20 @@ class TrustEngineManager:
 
         entered_restricted      = new_zone in ("quarantine", "read_only") and old_zone not in ("quarantine", "read_only")
         escalated_to_quarantine = new_zone == "quarantine" and old_zone == "read_only"
-        if entered_restricted or escalated_to_quarantine:
+
+        # Re-arm once the identity has recovered clear of the restriction band.
+        if state.trust >= ALERT_REARM_TRUST:
+            state.alert_armed = True
+
+        if (entered_restricted or escalated_to_quarantine) and state.alert_armed:
+            state.alert_armed = False        # suppress re-fires until recovery
             alert = {
                 "alert_id":     f"alert_{self._alert_total:05d}",
                 "user_id":      uid,
                 "role":         event.get("role", "unknown"),
                 "zone":         new_zone,
+                "zone_from":    old_zone,
+                "zone_to":      new_zone,
                 "trust":        round(state.trust, 4),
                 "action":       current_action,
                 "anomaly_score": round(anomaly_score, 4),
@@ -280,6 +318,10 @@ class TrustEngineManager:
                 "rho":          round(rho, 3),
             }
             self._alert_total += 1
+            if is_attack:
+                self._alert_attack += 1
+            else:
+                self._alert_benign += 1
             self._alerts.append(alert)
             if len(self._alerts) > MAX_STORED_ALERTS:
                 self._alerts = self._alerts[-MAX_STORED_ALERTS:]
@@ -297,6 +339,12 @@ class TrustEngineManager:
     def alert_total(self) -> int:
         """Total alerts raised this session (never truncated)."""
         return self._alert_total
+
+    @property
+    def alert_split(self) -> dict:
+        """Alert counts split by whether the triggering event was a real attack."""
+        return {"attack": self._alert_attack, "benign": self._alert_benign,
+                "total": self._alert_total}
 
     def get_alerts(self, limit: int = 50) -> list[dict]:
         return list(reversed(self._alerts[-limit:]))

@@ -1,5 +1,9 @@
 import React from 'react'
 
+const ZONE_SHORT = {
+  normal_access: 'NORMAL', step_up_mfa: 'MFA', read_only: 'READ-ONLY', quarantine: 'QUARANTINE',
+}
+
 const ZONE_STYLE = {
   quarantine: { color: '#ef4444', label: 'QUARANTINE', icon: '⛔' },
   read_only:  { color: '#f97316', label: 'READ-ONLY',  icon: '🔒' },
@@ -24,6 +28,11 @@ export function AlertCard({ alert, onExplain }) {
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: zs.color, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
             {zs.label}
           </span>
+          {alert.zone_from && alert.zone_from !== alert.zone_to && (
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+              {ZONE_SHORT[alert.zone_from] || alert.zone_from} → {ZONE_SHORT[alert.zone_to] || alert.zone_to}
+            </span>
+          )}
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: 'var(--text-pri)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {alert.user_id}
           </span>
