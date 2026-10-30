@@ -402,7 +402,13 @@ class TrustEngineManager:
                 "user_id":      uid,
                 "role":         event.get("role", "unknown"),
                 "zone":         new_zone,
-                "zone_from":    state.alert_pending_from or old_zone,
+                # An escalation (read-only -> quarantine) is itself the
+                # transition being reported, so name the zone it actually left.
+                # Otherwise report the zone the identity was in when it first
+                # crossed the boundary, since the intervening read-only step was
+                # never notified to a human.
+                "zone_from":    old_zone if escalated_to_quarantine
+                                else (state.alert_pending_from or old_zone),
                 "zone_to":      new_zone,
                 "trust":        round(state.trust, 4),
                 "action":       current_action,
