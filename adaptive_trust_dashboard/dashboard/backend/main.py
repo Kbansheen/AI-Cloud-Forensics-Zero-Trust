@@ -73,6 +73,27 @@ class AppState:
         self.comparison_log:  list[dict] = []
         self.real_log_count:  int  = 0
         self.real_events_per_role: dict[str, int] = {}
+        # Live progress for the initialisation screen. Polled by the dashboard
+        # while /api/simulation/init is still running, so the identity grid is
+        # never a blank window: every stage the model goes through is reported
+        # here as it happens.
+        self.init_progress: dict = {
+            "running":      False,
+            "done":         False,
+            "failed":       None,
+            "stage":        0,
+            "stage_label":  "",
+            "detail":       "",
+            "users_done":   0,
+            "users_total":  0,
+            "events":       0,
+            "real_events":  0,
+            "real_per_role": {},
+            "scenarios":    {},
+            "started_at":   None,
+            "elapsed_s":    0.0,
+            "log":          [],
+        }
 
 state = AppState()
 
@@ -223,12 +244,41 @@ def status():
 
 
 # ── Initialisation ────────────────────────────────────────────────────────────
+# The five stages the model actually goes through when the identities are built.
+# Reported one at a time so the dashboard can narrate the work instead of
+# showing an empty grid for ~20 s.
+INIT_STAGES = [
+    "Load real CloudTrail logs",
+    "Create identities",
+    "Train one Isolation Forest per identity",
+    "Generate the 90-day event trace",
+    "Register the MITRE ATT&CK scenarios",
+]
 
-@app.post("/api/simulation/init")
-async def init_simulation():
-    if state.is_running:
-        raise HTTPException(400, "Simulation already running — stop it first")
 
+def _init_stage(idx: int, detail: str = "", **extra):
+    """Publish init progress. Called from the worker thread; plain dict writes."""
+    p = state.init_progress
+    p.update({
+        "stage":       idx,
+        "stage_label": INIT_STAGES[idx - 1] if 1 <= idx <= len(INIT_STAGES) else "",
+        "detail":      detail,
+        **extra,
+    })
+    if p.get("started_at"):
+        p["elapsed_s"] = round(time.time() - p["started_at"], 1)
+
+
+def _init_log(msg: str):
+    p = state.init_progress
+    p["log"].append(msg)
+    if len(p["log"]) > 200:
+        p["log"] = p["log"][-200:]
+
+
+def _build_simulation():
+    """The heavy work. Runs in a worker thread so the event loop stays free to
+    serve /api/init-progress while this executes."""
     state.processed_idx        = 0
     state.labelled_events      = []
     state.scenario_start       = {}
@@ -241,15 +291,13 @@ async def init_simulation():
     state.engine               = TrustEngineManager(use_adaptive_ucb=True)
     state.sim                  = CloudTrailSimulator(n_users=DASHBOARD_USERS, seed=42)
 
-    for user in state.sim.users:
-        state.engine.register_user(user.user_id, user.role)
-
-    # ── Load real AWS CloudTrail logs per role ────────────────────────────
+    # ── Stage 1: real AWS CloudTrail logs, per role ───────────────────────
     # Real logs from 7 IAM users (developer, data-analyst, security-admin,
     # devops, finance, hr, executive) provide genuine AWS activity patterns.
     # Combined with synthetic events for full role coverage.
     # Laptop IP (106.192.x.x) and CloudShell IP (44.204.x.x) treated as
     # trusted internal IPs to prevent feature mismatch with simulation.
+    _init_stage(1, "Reading real AWS CloudTrail exports from real_logs/")
     real_by_role = {}
     real_logs_path = os.path.join(os.path.dirname(__file__), "real_logs")
     if os.path.exists(real_logs_path):
@@ -259,12 +307,26 @@ async def init_simulation():
         state.real_log_count = total_real
         state.real_events_per_role = {role: len(evts) for role, evts in real_by_role.items()}
         print(f"[REAL LOGS] {total_real} valid events across {len(real_by_role)} roles")
+        _init_log(f"{total_real:,} real events across {len(real_by_role)} roles")
+        _init_stage(1, f"{total_real:,} real events across {len(real_by_role)} roles",
+                    real_events=total_real, real_per_role=dict(state.real_events_per_role))
     else:
         print("[REAL LOGS] No real_logs/ folder — using synthetic baseline only")
+        _init_log("No real_logs/ folder — synthetic baseline only")
 
-    # ── Train per-user Isolation Forests (hybrid baseline) ────────────────
-    print(f"[INIT] Training {len(state.sim.users)} Isolation Forests...")
+    # ── Stage 2: identities ───────────────────────────────────────────────
+    _init_stage(2, f"Registering {len(state.sim.users)} identities")
     for user in state.sim.users:
+        state.engine.register_user(user.user_id, user.role)
+    _init_log(f"{len(state.sim.users)} identities registered, one trust bucket each")
+    _init_stage(2, f"{len(state.sim.users)} identities, one trust bucket each",
+                users_total=len(state.sim.users))
+
+    # ── Stage 3: one Isolation Forest per identity (hybrid baseline) ──────
+    n = len(state.sim.users)
+    print(f"[INIT] Training {n} Isolation Forests...")
+    _init_stage(3, f"0 / {n} trained", users_done=0, users_total=n)
+    for i, user in enumerate(state.sim.users, 1):
         synthetic_bl     = state.sim.generate_baseline(user, days=14)
         synthetic_events = [e.to_cloudtrail_dict() for e in synthetic_bl]
         role_real_events = real_by_role.get(user.role, [])
@@ -272,19 +334,32 @@ async def init_simulation():
             combined = role_real_events + synthetic_events
             print(f"[BASELINE] {user.user_id} ({user.role}): "
                   f"{len(role_real_events)} real + {len(synthetic_events)} synthetic")
+            _init_log(f"{user.user_id} ({user.role}): "
+                      f"{len(role_real_events):,} real + {len(synthetic_events):,} synthetic")
         else:
             combined = synthetic_events
         scorer = AnomalyScorer(seed=42)
         scorer.fit(combined, role=user.role)
         state.scorers[user.user_id] = scorer
+        _init_stage(3, f"{i} / {n} trained — {user.user_id} ({user.role})",
+                    users_done=i, users_total=n)
 
-    # ── Generate 30-day trace in real CloudTrail format ───────────────────
+    # ── Stage 4: the event trace ──────────────────────────────────────────
+    _init_stage(4, f"Generating {DASHBOARD_DAYS} days of activity")
     raw              = state.sim.generate_full_trace(days=DASHBOARD_DAYS)
     state.all_events = [e.to_cloudtrail_dict() for e in raw]
+    _init_log(f"{len(state.all_events):,} events generated")
+    _init_stage(4, f"{len(state.all_events):,} events generated",
+                events=len(state.all_events))
 
+    # ── Stage 5: attack scenarios ─────────────────────────────────────────
+    _init_stage(5, "Placing attack campaigns")
     for user in state.sim.users:
         if user.attack_scenario and user.attack_start_day is not None:
             state.scenario_start[user.attack_scenario] = user.attack_start_day * 24
+    _init_log(f"{len(state.scenario_start)} attack scenarios placed")
+    _init_stage(5, f"{len(state.scenario_start)} attack scenarios placed",
+                scenarios={k: int(v / 24) for k, v in state.scenario_start.items()})
 
     state.is_initialised = True
     print(f"[INIT] Ready: {len(state.sim.users)} users, "
@@ -292,13 +367,43 @@ async def init_simulation():
           f"{len(state.scenario_start)} scenarios, "
           f"{state.real_log_count} real log events used in baseline")
 
+
+@app.get("/api/init-progress")
+def init_progress():
+    """Live initialisation status, polled by the dashboard's init screen."""
+    return state.init_progress
+
+
+@app.post("/api/simulation/init")
+async def init_simulation():
+    if state.is_running:
+        raise HTTPException(400, "Simulation already running — stop it first")
+
+    p = state.init_progress
+    p.update({"running": True, "done": False, "failed": None, "stage": 0,
+              "stage_label": "Starting", "detail": "", "users_done": 0,
+              "users_total": 0, "events": 0, "real_events": 0, "real_per_role": {},
+              "scenarios": {}, "log": [], "started_at": time.time(), "elapsed_s": 0.0})
+    try:
+        # Worker thread: the loop stays free so /api/init-progress keeps
+        # answering while the forests are training.
+        await asyncio.to_thread(_build_simulation)
+    except Exception as exc:
+        p.update({"running": False, "failed": str(exc),
+                  "elapsed_s": round(time.time() - p["started_at"], 1)})
+        raise HTTPException(500, f"Initialisation failed: {exc}")
+    p.update({"running": False, "done": True,
+              "elapsed_s": round(time.time() - p["started_at"], 1)})
+
     return {
         "ok":                  True,
         "users":               len(state.sim.users),
         "events":              len(state.all_events),
         "scenarios":           list(state.scenario_start.keys()),
         "real_log_count":      state.real_log_count,
-        "baseline_source":     "hybrid_per_role" if real_by_role else "synthetic_only",
+        "real_events_per_role": state.real_events_per_role,
+        "baseline_source":     "hybrid_per_role" if state.real_log_count else "synthetic_only",
+        "elapsed_s":           p["elapsed_s"],
     }
 
 

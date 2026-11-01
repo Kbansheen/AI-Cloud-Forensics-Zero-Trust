@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react'
+import InitPanel from './InitPanel'
 
 const ZONE_STYLE = {
   normal_access: { bg: 'var(--z-green-bg)',  border: 'var(--z-green)',  color: 'var(--z-green)' },
@@ -138,7 +139,7 @@ function UserCard({ user, onClick, selected, realEventsPerRole, shapChip }) {
   )
 }
 
-export default function TrustGrid({ users, onSelectUser, selectedUser, realEventsPerRole, shapChips }) {
+export default function TrustGrid({ users, onSelectUser, selectedUser, realEventsPerRole, shapChips, onInit }) {
   const sorted = [...users].sort((a, b) => a.trust - b.trust)
   const realRoleCount = Object.keys(realEventsPerRole || {}).length
 
@@ -195,11 +196,7 @@ export default function TrustGrid({ users, onSelectUser, selectedUser, realEvent
         ))}
       </div>
 
-      {users.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-          No users yet — initialise simulation first
-        </div>
-      )}
+      {users.length === 0 && <InitPanel onInit={onInit} />}
     </div>
   )
 }
