@@ -19,6 +19,7 @@ Any results table must state which scale it was produced at; the two are not
 interchangeable and must not be presented as equivalent.
 """
 
+from datetime import datetime
 import numpy as np
 from scipy.stats import rankdata
 from simulator import CloudTrailSimulator, MITRE_SCENARIOS
@@ -63,6 +64,15 @@ SCENARIO_LABELS = {
     "credential_access":    ("Credential Access",  "T1606"),
     "lateral_movement":     ("Lateral Movement",   "T1530"),
 }
+
+
+def _event_time(ev: dict):
+    """Parse an event's timestamp. Returns None if absent/unparseable."""
+    raw = ev.get("timestamp") or ev.get("eventTime") or ""
+    try:
+        return datetime.strptime(str(raw).replace("Z", "")[:19], "%Y-%m-%dT%H:%M:%S")
+    except Exception:
+        return None
 
 
 def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
@@ -194,10 +204,21 @@ def _run_one(sim, scorers, *, use_adversary: bool, use_ucb: bool,
     for sc in scenarios:
         if sc in first_detect:
             detection_per_sc[sc] = 1
-            mttd_per_sc[sc] = round(
-                (first_detect[sc] - attack_start.get(sc, first_detect[sc]))
-                / max(1, events_per_hour), 2
-            )
+            # MTTD is ELAPSED TIME between the campaign's first attack event and
+            # its first restriction, read off the event timestamps.
+            #
+            # This previously divided the gap in EVENT INDICES by the dataset-wide
+            # average rate (events_per_hour). That is not a duration: activity is
+            # bursty, so an identity attacking hard can emit 300 events/hour while
+            # the average is 83.5, inflating a 1h41 gap to 5.46h. Measured on
+            # timestamps the same run gives 1.68h — the old column was wrong by up
+            # to 3x in both directions.
+            t0 = _event_time(trace[attack_start.get(sc, first_detect[sc])])
+            t1 = _event_time(trace[first_detect[sc]])
+            if t0 is not None and t1 is not None:
+                mttd_per_sc[sc] = round((t1 - t0).total_seconds() / 3600.0, 2)
+            else:
+                mttd_per_sc[sc] = None
         elif sc in attack_start:
             detection_per_sc[sc] = 0
             mttd_per_sc[sc]      = None
