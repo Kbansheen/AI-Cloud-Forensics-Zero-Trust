@@ -10,7 +10,19 @@ const METRICS = [
   { key:'auc',               label:'AUC (event)',        fmt:v=>v?.toFixed(3)??'—',       note:'Paper 1 baseline: 0.65' },
   { key:'fpr',               label:'FPR (score ≥ 0.55)', fmt:v=>v?.toFixed(4)??'—',       note:'event-level rate' },
   { key:'precision',         label:'Precision (≥ 0.55)', fmt:v=>v?.toFixed(3)??'—',       note:'event-level' },
-  { key:'scenarios_detected',label:'Scenarios',          fmt:v=>`${v??'—'} / 8`,          note:'attack event in restricted zone' },
+  { key:'scenarios_detected',label:'Scenarios',          fmt:v=>`${v??'—'} / 8`,
+    // Second line: how fast the caught campaigns were caught. Median over the
+    // campaigns that were detected, measured from each campaign's first attack
+    // event to the moment that identity was restricted — the same definition
+    // comparison.py uses for MTTD. Without it the tile says "7 of 8 caught" and
+    // leaves the reader to assume "caught immediately".
+    note:(v,m)=>{
+      const mins = m?.median_ttd_min
+      if (mins == null) return 'attack event in restricted zone'
+      const t = mins < 90 ? `${Math.round(mins)} min`
+                          : `${(mins/60).toFixed(1)} h`
+      return `median ${t} to restrict`
+    } },
   { key:'total_alerts',      label:'Alerts',
     fmt:(v,m)=>v?.toLocaleString()??'—',
     note:(v,m)=> m?.alerts_attack!=null ? `${m.alerts_attack} real / ${m.alerts_benign} benign` : '' },

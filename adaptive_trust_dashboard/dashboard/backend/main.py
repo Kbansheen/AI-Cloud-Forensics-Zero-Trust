@@ -68,6 +68,11 @@ class AppState:
         self.labelled_events: list = []
         self.scenario_start:  dict = {}
         self.scenario_detect: dict = {}
+        # Index of each campaign's FIRST attack event. Needed for time-to-detect:
+        # state.scenario_start holds an hour offset from the simulator, not an
+        # event index, so it cannot be used for latency (see the "Finding C"
+        # correction in POST_RUN_ANALYSIS_0.55.md).
+        self.scenario_first_attack: dict = {}
         self.comparison_results: Optional[dict] = None
         self.comparison_running: bool = False
         self.comparison_log:  list[dict] = []
@@ -283,6 +288,7 @@ def _build_simulation():
     state.labelled_events      = []
     state.scenario_start       = {}
     state.scenario_detect      = {}
+    state.scenario_first_attack = {}
     state.scorers              = {}
     state.explainers           = {}
     state.metrics              = {}
@@ -469,8 +475,8 @@ async def step_simulation(req: StepRequest):
         result  = state.engine.process_event(ev, s, i, reasons)
         state.labelled_events.append((ev, s, ev.get("is_attack", False)))
         sc = ev.get("attack_scenario")
-        if sc and ev.get("is_attack") and sc not in state.scenario_start:
-            state.scenario_start[sc] = i
+        if sc and ev.get("is_attack") and sc not in state.scenario_first_attack:
+            state.scenario_first_attack[sc] = i
         # A scenario counts as DETECTED only if the identity TRANSITIONS into a
         # restricted zone at or after that scenario's first attack event. The old
         # rule counted any event from a tagged identity while it sat in read_only,
@@ -532,8 +538,8 @@ async def _run_full_bg():
             result  = state.engine.process_event(ev, s, i, reasons)
             state.labelled_events.append((ev, s, ev.get("is_attack", False)))
             sc = ev.get("attack_scenario")
-            if sc and ev.get("is_attack") and sc not in state.scenario_start:
-                state.scenario_start[sc] = i
+            if sc and ev.get("is_attack") and sc not in state.scenario_first_attack:
+                state.scenario_first_attack[sc] = i
             if (sc and sc in state.scenario_start and sc not in state.scenario_detect
                     and result["zone_changed"]
                     and result["zone"] in ("read_only", "quarantine")):
@@ -869,6 +875,51 @@ async def ws_endpoint(ws: WebSocket):
 
 # ── Internal ──────────────────────────────────────────────────────────────────
 
+def _ttd_block() -> dict:
+    lat = _scenario_latency_minutes()
+    return {
+        "median_ttd_min":   lat["median_min"],
+        "ttd_per_scenario": lat["per_sc"],
+        "ttd_n":            lat["n"],
+    }
+
+
+def _scenario_latency_minutes() -> dict:
+    """Time from each campaign's first attack event to its first restriction,
+    in minutes, plus the median. Measured on incident timestamps, so it matches
+    how comparison.py reports MTTD (first attack event -> first restricted zone).
+    """
+    def ts(ev):
+        raw = ev.get("eventTime") or ev.get("timestamp") or ""
+        try:
+            return datetime.strptime(raw[:19], "%Y-%m-%dT%H:%M:%S")
+        except Exception:
+            return None
+
+    per = {}
+    for sc, first_idx in state.scenario_first_attack.items():
+        det_idx = state.scenario_detect.get(sc)
+        if det_idx is None:
+            per[sc] = None
+            continue
+        try:
+            t0, t1 = ts(state.all_events[first_idx]), ts(state.all_events[det_idx])
+        except Exception:
+            per[sc] = None
+            continue
+        if t0 is None or t1 is None:
+            per[sc] = None
+            continue
+        per[sc] = round((t1 - t0).total_seconds() / 60.0, 1)
+
+    vals = sorted(v for v in per.values() if v is not None)
+    median = None
+    if vals:
+        mid = len(vals) // 2
+        median = round(vals[mid] if len(vals) % 2 else (vals[mid - 1] + vals[mid]) / 2, 1)
+    return {"per_sc": per, "median_min": median, "n": len(vals)}
+
+
 def _refresh_metrics():
     if not state.labelled_events:
         return
@@ -884,4 +935,5 @@ def _refresh_metrics():
         "adaptive_ucb":       state.engine._use_adaptive_ucb,
         "adversary_enabled":  state.engine.adversary_enabled,
         "real_log_count":     state.real_log_count,
+        **_ttd_block(),
     }
