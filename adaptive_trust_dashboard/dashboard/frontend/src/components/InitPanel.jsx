@@ -29,6 +29,11 @@ const C = {
   red: 'var(--z-red)', purple: 'var(--z-purple)',
   card: 'var(--bg-card)', surface: 'var(--bg-surface)', border: 'var(--border)',
   pri: 'var(--text-pri)', sec: 'var(--text-sec)', dim: 'var(--text-dim)',
+  // --text-dim (#3d5270) is used elsewhere for faint chrome, but it is too dark
+  // for body copy on the #070c18 background. These two tones keep the panel
+  // readable while still reading as secondary text.
+  sub:  '#a9bcd6',   // stage titles, future stages
+  hint: '#8ea3c0',   // the one-line explanation under each stage
   mono: 'var(--font-mono)',
 }
 
@@ -71,7 +76,7 @@ export default function InitPanel({ onInit }) {
     ? { text: 'FAILED', colour: C.red }
     : running ? { text: 'INITIALISING', colour: C.yellow }
     : done ? { text: 'READY', colour: C.green }
-    : { text: 'NOT STARTED', colour: C.dim }
+    : { text: 'NOT STARTED', colour: C.sub }
 
   return (
     <div style={{ maxWidth: 980, margin: '0 auto', padding: '18px 4px' }}>
@@ -99,7 +104,7 @@ export default function InitPanel({ onInit }) {
         )}
       </div>
 
-      <div style={{ fontFamily: C.mono, fontSize: 11, color: C.sec, marginBottom: 14, lineHeight: 1.5 }}>
+      <div style={{ fontFamily: C.mono, fontSize: 11, color: C.sub, marginBottom: 14, lineHeight: 1.5 }}>
         Building the simulation: 50 identities, each with its own behavioural baseline, then the
         event trace they will be judged against. Nothing is scored until this finishes.
       </div>
@@ -116,7 +121,7 @@ export default function InitPanel({ onInit }) {
         {STAGES.map(s => {
           const st = stageState(s.n)
           const dot = st === 'done' ? '✓' : st === 'running' ? '▶' : '○'
-          const col = st === 'done' ? C.green : st === 'running' ? C.yellow : C.dim
+          const col = st === 'done' ? C.green : st === 'running' ? C.yellow : C.sub
           const isCur = st === 'running'
           return (
             <div key={s.n} style={{
@@ -131,7 +136,7 @@ export default function InitPanel({ onInit }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                   <span style={{ fontFamily: C.mono, fontSize: 12,
-                                 color: st === 'pending' ? C.dim : C.pri }}>
+                                 color: st === 'pending' ? C.sub : C.pri }}>
                     {s.n}. {s.label}
                   </span>
                   {isCur && p?.detail && (
@@ -141,28 +146,28 @@ export default function InitPanel({ onInit }) {
                     </span>
                   )}
                   {st === 'done' && s.n === 3 && p?.users_total > 0 && (
-                    <span style={{ fontFamily: C.mono, fontSize: 10.5, color: C.dim }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 10.5, color: C.hint }}>
                       {p.users_total} models
                     </span>
                   )}
                   {st === 'done' && s.n === 1 && p?.real_events > 0 && (
-                    <span style={{ fontFamily: C.mono, fontSize: 10.5, color: C.dim }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 10.5, color: C.hint }}>
                       {p.real_events.toLocaleString()} events
                     </span>
                   )}
                   {st === 'done' && s.n === 4 && p?.events > 0 && (
-                    <span style={{ fontFamily: C.mono, fontSize: 10.5, color: C.dim }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 10.5, color: C.hint }}>
                       {p.events.toLocaleString()} events
                     </span>
                   )}
                   {st === 'done' && s.n === 5 && p?.scenarios &&
                    Object.keys(p.scenarios).length > 0 && (
-                    <span style={{ fontFamily: C.mono, fontSize: 10.5, color: C.dim }}>
+                    <span style={{ fontFamily: C.mono, fontSize: 10.5, color: C.hint }}>
                       {Object.keys(p.scenarios).length} campaigns
                     </span>
                   )}
                 </div>
-                <div style={{ fontFamily: C.mono, fontSize: 10.5, color: C.dim,
+                <div style={{ fontFamily: C.mono, fontSize: 10.5, color: C.hint,
                               marginTop: 2, lineHeight: 1.45 }}>
                   {s.hint}
                 </div>
@@ -241,7 +246,7 @@ export default function InitPanel({ onInit }) {
             borderRadius: 5, padding: '8px 16px' }}>
             ⚡ INITIALISE IDENTITIES
           </button>
-          <span style={{ fontFamily: C.mono, fontSize: 11, color: C.dim }}>
+          <span style={{ fontFamily: C.mono, fontSize: 11, color: C.hint }}>
             takes about 20 seconds · everything above runs in that time
           </span>
         </div>
