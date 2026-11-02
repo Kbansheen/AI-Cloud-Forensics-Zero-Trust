@@ -215,12 +215,19 @@ export default function InitPanel({ onInit }) {
                         letterSpacing: '.07em', marginBottom: 6 }}>
             WORK LOG
           </div>
-          <div style={{ maxHeight: 132, overflowY: 'auto', display: 'flex',
+          {/* maxHeight + overflowY scrolls the log. The lines are flex children,
+              and flex children shrink by default (flex-shrink: 1) — with 40 of
+              them inside a 132px box each row was being squashed to ~3px and
+              clipped mid-glyph, which rendered as a column of unreadable dashes
+              rather than a scrolling list. flexShrink: 0 keeps each line at its
+              natural height so the container scrolls instead of crushing it. */}
+          <div style={{ maxHeight: 150, overflowY: 'auto', display: 'flex',
                         flexDirection: 'column', gap: 1 }}>
             {p.log.slice(-40).map((line, i) => (
-              <div key={i} style={{ fontFamily: C.mono, fontSize: 10.5, color: C.sec,
+              <div key={i} style={{ fontFamily: C.mono, fontSize: 10.5, color: C.sub,
                                     lineHeight: 1.5, whiteSpace: 'nowrap',
-                                    overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    overflow: 'hidden', textOverflow: 'ellipsis',
+                                    flexShrink: 0 }}>
                 {line}
               </div>
             ))}
