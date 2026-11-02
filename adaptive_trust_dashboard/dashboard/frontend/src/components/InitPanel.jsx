@@ -62,7 +62,10 @@ export default function InitPanel({ onInit }) {
   // Overall progress: each completed stage is a fifth; stage 3 is weighted by
   // how many forests have been trained.
   let frac = stage / 5
-  if (stage === 3 && p?.users_total) frac = (2 + p.users_done / p.users_total) / 5
+  if ((stage === 3 || stage === 4) && p?.users_total) {
+    const sub = p.users_done / p.users_total          // within-stage progress
+    frac = (stage - 1 + sub) / 5
+  }
   if (done) frac = 1
 
   const stageState = (n) => {
@@ -171,8 +174,8 @@ export default function InitPanel({ onInit }) {
                               marginTop: 2, lineHeight: 1.45 }}>
                   {s.hint}
                 </div>
-                {/* per-stage progress bar for the forest training */}
-                {isCur && s.n === 3 && p?.users_total > 0 && (
+                {/* per-stage progress bar — training (3) and trace build (4) */}
+                {isCur && (s.n === 3 || s.n === 4) && p?.users_total > 0 && (
                   <div style={{ height: 2, background: C.surface, borderRadius: 1,
                                 marginTop: 6, overflow: 'hidden' }}>
                     <div style={{ height: '100%', background: C.yellow,

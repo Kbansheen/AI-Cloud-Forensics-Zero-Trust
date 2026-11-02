@@ -351,12 +351,26 @@ def _build_simulation():
                     users_done=i, users_total=n)
 
     # ── Stage 4: the event trace ──────────────────────────────────────────
-    _init_stage(4, f"Generating {DASHBOARD_DAYS} days of activity")
-    raw              = state.sim.generate_full_trace(days=DASHBOARD_DAYS)
+    # Every identity's 90 days are written up-front, so the timeline is fixed
+    # before any scoring and a re-run reproduces it exactly. Progress is
+    # reported per identity as the generator walks the timeline.
+    def _trace_progress(done, total, n_events):
+        _init_stage(4, f"{done} / {total} identities · {n_events:,} events",
+                    users_done=done, users_total=total, events=n_events)
+
+    _init_stage(4, f"Writing {DASHBOARD_DAYS} days for {n} identities",
+                users_done=0, users_total=n, events=0)
+    raw              = state.sim.generate_full_trace(days=DASHBOARD_DAYS,
+                                                     progress_cb=_trace_progress)
     state.all_events = [e.to_cloudtrail_dict() for e in raw]
-    _init_log(f"{len(state.all_events):,} events generated")
-    _init_stage(4, f"{len(state.all_events):,} events generated",
-                events=len(state.all_events))
+    n_attack = sum(1 for e in raw if e.is_attack)
+    per_id   = round(len(raw) / max(1, n), 1)
+    _init_log(f"{len(raw):,} events for {n} identities "
+              f"({n_attack:,} attack / {len(raw) - n_attack:,} benign, "
+              f"~{per_id:,.0f} per identity)")
+    _init_stage(4, f"{len(raw):,} events "
+                   f"({n_attack:,} attack / {len(raw) - n_attack:,} benign)",
+                users_done=n, users_total=n, events=len(raw))
 
     # ── Stage 5: attack scenarios ─────────────────────────────────────────
     _init_stage(5, "Placing attack campaigns")
