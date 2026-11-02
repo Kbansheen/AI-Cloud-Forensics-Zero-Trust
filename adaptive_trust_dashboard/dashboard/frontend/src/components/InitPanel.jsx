@@ -79,7 +79,7 @@ export default function InitPanel({ onInit }) {
     : { text: 'NOT STARTED', colour: C.sub }
 
   return (
-    <div style={{ maxWidth: 980, margin: '0 auto', padding: '18px 4px' }}>
+    <div style={{ width: '100%', padding: '18px 16px' }}>
 
       {/* ── header ─────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
@@ -221,7 +221,7 @@ export default function InitPanel({ onInit }) {
               clipped mid-glyph, which rendered as a column of unreadable dashes
               rather than a scrolling list. flexShrink: 0 keeps each line at its
               natural height so the container scrolls instead of crushing it. */}
-          <div style={{ maxHeight: 150, overflowY: 'auto', display: 'flex',
+          <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex',
                         flexDirection: 'column', gap: 1 }}>
             {p.log.slice(-40).map((line, i) => (
               <div key={i} style={{ fontFamily: C.mono, fontSize: 10.5, color: C.sub,

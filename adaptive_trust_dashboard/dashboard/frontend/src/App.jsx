@@ -366,13 +366,19 @@ export default function App() {
               </div>
             )}
           </div>
-          <div data-tour="detail-panel" style={{
-            height:240, minHeight:150, maxHeight:'60vh', flexShrink:0,
-            resize:'vertical', overflow:'auto',
-            borderTop:'1px solid var(--border)', padding:'14px', background:'var(--bg-surface)',
-          }}>
-            <UserDetailPanel user={selectedUser} history={userHistory} ucb={userUcb} onClose={() => setSelectedUser(null)}/>
-          </div>
+          {/* The detail strip is meaningless before anyone exists — it would sit
+              there saying "Select an identity to view detail" while the init
+              screen is still building them. Hidden until there are identities,
+              which also gives the init panel the full height of the centre pane. */}
+          {users.length > 0 && (
+            <div data-tour="detail-panel" style={{
+              height:240, minHeight:150, maxHeight:'60vh', flexShrink:0,
+              resize:'vertical', overflow:'auto',
+              borderTop:'1px solid var(--border)', padding:'14px', background:'var(--bg-surface)',
+            }}>
+              <UserDetailPanel user={selectedUser} history={userHistory} ucb={userUcb} onClose={() => setSelectedUser(null)}/>
+            </div>
+          )}
         </main>
 
         {/* Right: alerts */}
