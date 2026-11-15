@@ -56,14 +56,14 @@ export function EventRow({ ev, idx }) {
 }
 
 /** Full JSON of one event. */
-export function EventJSON({ ev }) {
+export function EventJSON({ ev, tall = false }) {
   if (!ev) return null
   return (
     <pre style={{
       fontFamily: C.mono, fontSize: 9.5, lineHeight: 1.5, color: C.sec,
       background: C.surface, border: `1px solid ${C.border}`, borderRadius: 4,
       padding: '8px 10px', margin: 0, overflowX: 'auto',
-      maxHeight: full ? 520 : 240,
+      maxHeight: tall ? 520 : 240,
     }}>
       {JSON.stringify(ev, null, 2)}
     </pre>
@@ -139,7 +139,7 @@ export default function TraceViewer({ title = 'EVENT TRACE', defaultOnly = 'all'
         </div>
       )}
 
-      {data && showJson && <EventJSON ev={data.raw_first} />}
+      {data && showJson && <EventJSON ev={data.raw_first} tall={full} />}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
         <span style={{ fontFamily: C.mono, fontSize: 9.5, color: C.hint }}>
