@@ -31,7 +31,7 @@ from feature_encoder import (
     _hash_slot, N_ACTIONS, N_RESOURCE_TYPES,
 )
 from anomaly_scorer import AnomalyScorer
-from trust_engine import TrustEngineManager
+from trust_engine import TrustEngineManager, ALERT_IMMEDIATE_SCORE
 from adversary import AdversaryConfig
 from comparison import run_comparison, SCENARIO_LABELS
 from cloudtrail_loader import load_cloudtrail_directory, load_cloudtrail_records
@@ -834,6 +834,15 @@ def explain_alert(alert_id: str, top_k: int = 6):
             "resource_type": resource,
             "anomaly_score": alert.get("anomaly_score"),
             "method":        "Novelty override (not SHAP)",
+            "units":         "n/a — score set directly by rule, not by the forest",
+            "base_value":    None,
+            "event_value":   None,
+            "total_movement": None,
+            "alert_reason":  "novelty override",
+            "summary": (
+                f"This alert fired because the {what} had never been seen before for "
+                f"this identity, which forces the score to 1.0 on its own."
+            ),
             "note": (
                 f"This score was set directly by the novelty override, not by the "
                 f"Isolation Forest: the {what} \"{value}\" never appeared in this "
@@ -856,15 +865,76 @@ def explain_alert(alert_id: str, top_k: int = 6):
     # against score_samples() before wiring this up.
     contributions = -shap_vals
 
-    order = np.argsort(-np.abs(contributions))[:top_k]
+    ranked = np.argsort(-np.abs(contributions))
+    labels = {int(i): _label_feature_index(int(i), event, action, resource)
+              for i in ranked[:max(top_k * 4, 24)]}
+
+    # Hashed one-hot dimensions ("... vocabulary (bucket 497)") are real model
+    # inputs but carry no human meaning — nobody can say which actions live in
+    # slot 497. Ranked by |contribution| they displace readable features and
+    # make the panel look like noise, so we fill the top-k from READABLE
+    # features only and report how many hashed ones were passed over.
+    def _readable(i):
+        return "(bucket " not in labels.get(int(i), "")
+
+    # Only keep readable features that actually moved the score: at least 1% of
+    # the largest single contribution. Without this the list pads itself with
+    # rows like "Call origin  -0.000  0.0%" purely to reach top_k, which reads
+    # as a finding when it is rounding dust.
+    peak = float(np.max(np.abs(contributions))) or 1.0
+    readable = [int(i) for i in ranked
+                if _readable(i) and abs(float(contributions[i])) >= 0.01 * peak][:top_k]
+
+    # A hashed feature is "passed over" if it ranked at least as high as the
+    # smallest contribution we did show — i.e. it would have appeared in the
+    # list had we not filtered.
+    floor = min((abs(float(contributions[i])) for i in readable), default=np.inf)
+    passed_over = [int(i) for i in ranked
+                   if not _readable(i) and abs(float(contributions[i])) >= floor]
+
+    order = [i for i in readable if int(i) in labels] or [int(i) for i in ranked[:1]]
     explanation = [
         {
-            "feature":      _label_feature_index(int(i), event, action, resource),
+            "feature":      labels[int(i)],
             "contribution": round(float(contributions[i]), 4),
             "direction":    "increases anomaly" if contributions[i] > 0 else "decreases anomaly",
         }
         for i in order
     ]
+
+    # Context that makes the numbers readable.
+    #
+    # The contributions above are in PATH-LENGTH units — the natural output of
+    # the forest — not in the 0-1 anomaly score shown on the card. Presenting
+    # "+1.230" next to "score=0.108" with no explanation invites the reader to
+    # think a single feature contributes more than the whole score, which looks
+    # like a contradiction. So we also publish the baseline the forest starts
+    # from, where this event ended up, and the total movement between them.
+    base   = float(np.asarray(explainer.expected_value).ravel()[0])
+    total  = float(np.sum(contributions))          # sign flipped: + = more anomalous
+    event_path = base - total                      # paths shorten as anomaly rises
+
+    # Why the alert fired at all. Most alerts are raised because the IDENTITY
+    # stayed restricted, not because this particular event was anomalous, and
+    # the panel must say so — otherwise it implies the action is the culprit.
+    score = alert.get("anomaly_score") or 0.0
+    persisted = alert.get("persisted") or 1
+    if score >= ALERT_IMMEDIATE_SCORE:
+        reason = "high-score event"
+        why = (f"This event itself scored {score:.3f}, at or above the "
+               f"{ALERT_IMMEDIATE_SCORE:.2f} threshold, so the alert fired immediately.")
+    else:
+        reason = f"held {persisted} events"
+        why = (f"This event scored only {score:.3f} — it is ordinary. The alert fired "
+               f"because the identity had stayed below the trust boundary for "
+               f"{persisted} of its own consecutive events, not because of this action.")
+
+    # Share of the total movement across EVERY feature in the vector, which is
+    # more meaningful than a share of the largest single feature shown.
+    abs_total = float(np.sum(np.abs(contributions))) or 1.0
+    for row, i in zip(explanation, order):
+        row["share"] = round(abs(float(contributions[i])) / abs_total * 100, 1)
+    shown_share = round(sum(r["share"] for r in explanation), 1)
 
     return {
         "alert_id":      alert_id,
@@ -873,6 +943,21 @@ def explain_alert(alert_id: str, top_k: int = 6):
         "resource_type": resource,
         "anomaly_score": alert.get("anomaly_score"),
         "method":        "SHAP TreeExplainer (Isolation Forest path-length attribution)",
+        "units":         "path length (shorter = more anomalous)",
+        "base_value":    round(base, 3),
+        "event_value":   round(event_path, 3),
+        "total_movement": round(total, 3),
+        "alert_reason":  reason,
+        "summary":       why,
+        "share_label":   "of all features' total movement",
+        "shown_share":   shown_share,
+        "hidden_hashed": len(passed_over),
+        "hidden_note":   (
+            f"{len(passed_over)} further hashed feature(s) — one-hot vocabulary "
+            f"buckets — moved the score at least as much as the smallest entry "
+            f"shown, but cannot be read by a human, so they are left out rather "
+            f"than listed as \"bucket N\"."
+        ) if passed_over else None,
         "explanation":   explanation,
     }
 

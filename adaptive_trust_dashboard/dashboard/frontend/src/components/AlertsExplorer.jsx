@@ -50,7 +50,15 @@ function ExplainPanel({ alertId }) {
     )
   }
 
-  const { explanation, method, note } = state.data
+  // Split out so the rendered explanation can be mounted with fixed data in a
+  // smoke test — the fetch wrapper is not renderable without a live server.
+  return <ExplainBody data={state.data} />
+}
+
+export function ExplainBody({ data }) {
+  const { explanation, method, note, summary,
+          base_value, event_value, total_movement, units,
+          share_label, shown_share, hidden_note } = data
 
   if (!explanation || explanation.length === 0) {
     return (
@@ -64,7 +72,15 @@ function ExplainPanel({ alertId }) {
         }}>
           {method}
         </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-pri)', lineHeight: 1.7 }}>
+        {summary && (
+          <div style={{
+            fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-pri)',
+            lineHeight: 1.7, marginBottom: 10, fontWeight: 600,
+          }}>
+            {summary}
+          </div>
+        )}
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-sec)', lineHeight: 1.7 }}>
           {note}
         </div>
       </div>
@@ -84,6 +100,27 @@ function ExplainPanel({ alertId }) {
       }}>
         {method}
       </div>
+      {summary && (
+        <div style={{
+          fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-pri)',
+          lineHeight: 1.7, marginBottom: 14, paddingBottom: 14,
+          borderBottom: '1px dashed var(--border)',
+        }}>
+          {summary}
+        </div>
+      )}
+
+      {base_value != null && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: '6px 22px', marginBottom: 14,
+          fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-sec)',
+        }}>
+          <span>whole-score baseline <b style={{ color: 'var(--text-pri)' }}>{base_value}</b></span>
+          <span>→ this event <b style={{ color: 'var(--text-pri)' }}>{event_value}</b></span>
+          <span>moved by <b style={{ color: 'var(--text-pri)' }}>{Math.abs(total_movement)}</b></span>
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {explanation.map((f, i) => {
           const pct = (Math.abs(f.contribution) / maxAbs) * 100
@@ -95,7 +132,12 @@ function ExplainPanel({ alertId }) {
                 display: 'flex', justifyContent: 'space-between',
                 fontFamily: 'var(--font-mono)', fontSize: 13, marginBottom: 4,
               }}>
-                <span style={{ color: 'var(--text-pri)', fontWeight: 600 }}>{f.feature}</span>
+                <span style={{ color: 'var(--text-pri)', fontWeight: 600 }}>
+                  {f.feature}
+                  {f.share != null && (
+                    <span style={{ color: 'var(--text-sec)', fontWeight: 400 }}> · {f.share}%</span>
+                  )}
+                </span>
                 <span style={{ color, fontWeight: 700 }}>
                   {up ? '+' : ''}{f.contribution.toFixed(3)}
                 </span>
@@ -108,11 +150,22 @@ function ExplainPanel({ alertId }) {
         })}
       </div>
       <div style={{
-        marginTop: 14, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text-sec)',
-        display: 'flex', gap: 18,
+        marginTop: 14, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-sec)',
+        lineHeight: 1.7,
       }}>
-        <span><span style={{ color: '#f87171' }}>■</span> increases anomaly</span>
-        <span><span style={{ color: '#34d399' }}>■</span> decreases anomaly</span>
+        {hidden_note && (
+          <div style={{ marginBottom: 10, color: 'var(--text-sec)' }}>{hidden_note}</div>
+        )}
+        <div style={{ display: 'flex', gap: 18, fontWeight: 600, marginBottom: 8 }}>
+          <span><span style={{ color: '#f87171' }}>■</span> pushes toward anomalous</span>
+          <span><span style={{ color: '#34d399' }}>■</span> pushes toward normal</span>
+        </div>
+        <span>Numbers are </span>
+        <b style={{ color: 'var(--text-pri)' }}>{units}</b><span>{', measured against the whole-score baseline above — they are '}</span>
+        <i>not</i>
+        <span> percentages of the 0–1 anomaly score and do not add up to it. </span>
+        <span>Percentages are {share_label || 'of all features\' total movement'}; </span>
+        <span>the bar length compares each feature with the largest one shown here.</span>
       </div>
     </div>
   )
