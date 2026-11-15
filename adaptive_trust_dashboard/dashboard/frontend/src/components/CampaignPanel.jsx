@@ -21,6 +21,15 @@ const C = {
 const fmtTime = s => (s ? String(s).replace('T', ' ').replace('Z', '').slice(0, 16) : '—')
 const fmtLat = m => (m == null ? '—' : m < 90 ? `${Math.round(m)} min`
                           : `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')}`)
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+// "26 Jan 11:36" — compact enough to fit two per cell
+const fmtStamp = s => {
+  if (!s) return '—'
+  const d = new Date(String(s).replace('Z', ''))
+  if (isNaN(d)) return fmtTime(s)
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+}
+
 // campaign duration, from its first malicious event to its last
 const fmtSpan = h => (h == null ? '—'
   : h < 1   ? `${Math.round(h * 60)} min`
@@ -86,7 +95,7 @@ export default function CampaignPanel() {
           <thead>
             <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
               {th('Campaign', 150)}{th('Tactic', 62)}{th('Identity', 88)}
-              {th('Events', 62)}{th('Days', 52)}{th('Span', 84)}{th('First attack', 132)}
+              {th('Events', 62)}{th('Campaign span', 300)}
               {th('Restricted at', 132)}{th('Restricted after', 118)}{th('In window', 72)}
             </tr>
           </thead>
@@ -111,15 +120,13 @@ export default function CampaignPanel() {
                     <td style={{ padding: '6px 8px', fontFamily: C.mono, fontSize: 10.5, color: C.pri }}>
                       {r.n_events}
                     </td>
-                    <td style={{ padding: '6px 8px', fontFamily: C.mono, fontSize: 10, color: C.hint }}>
-                      {r.days_spanned}
-                    </td>
                     <td style={{ padding: '6px 8px', fontFamily: C.mono, fontSize: 10,
                                  color: C.sec, whiteSpace: 'nowrap' }}>
-                      {fmtSpan(r.span_hours)}
-                    </td>
-                    <td style={{ padding: '6px 8px', fontFamily: C.mono, fontSize: 9.5, color: C.hint }}>
-                      {fmtTime(r.first_attack)}
+                      {fmtStamp(r.first_attack)}
+                      <span style={{ color: C.hint }}> → </span>
+                      {fmtStamp(r.last_attack)}
+                      <span style={{ color: C.hint }}> · </span>
+                      <span style={{ color: C.yellow }}>{fmtSpan(r.span_hours)}</span>
                     </td>
                     <td style={{ padding: '6px 8px', fontFamily: C.mono, fontSize: 9.5,
                                  color: det ? C.pri : C.red }}>
@@ -137,7 +144,7 @@ export default function CampaignPanel() {
 
                   {isOpen && (
                     <tr style={{ background: C.surface }}>
-                      <td colSpan={10} style={{ padding: '10px 14px' }}>
+                      <td colSpan={8} style={{ padding: '10px 14px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
                                       gap: 10, fontFamily: C.mono, fontSize: 10.5 }}>
                           <div>
@@ -149,7 +156,9 @@ export default function CampaignPanel() {
                             <div style={{ color: C.pri }}>
                               {fmtTime(r.first_attack)} → {fmtTime(r.last_attack)}
                               {r.span_hours != null && (
-                                <span style={{ color: C.hint }}> ({fmtSpan(r.span_hours)})</span>
+                                <span style={{ color: C.hint }}>
+                                  {' '}({fmtSpan(r.span_hours)}, across {r.days_spanned} calendar days)
+                                </span>
                               )}
                             </div>
                           </div>
