@@ -19,7 +19,7 @@ const STAGES = [
   { n: 3, label: 'Train one Isolation Forest per identity',
     hint: 'Each identity gets its own model of "what is normal for me", from their real logs plus synthetic padding.' },
   { n: 4, label: 'Generate the 90-day event trace',
-    hint: 'Produce every CloudTrail-format event the simulation will replay.' },
+    hint: 'For each identity, simulate all 90 of its days in turn — mostly routine work, with 278 attack events spread across the 8 campaigns. The result is a fixed CloudTrail timeline that is replayed and scored afterwards.' },
   { n: 5, label: 'Register the MITRE ATT&CK scenarios',
     hint: 'Place the 8 attack campaigns on their start days.' },
 ]

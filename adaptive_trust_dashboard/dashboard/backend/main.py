@@ -379,9 +379,14 @@ def _build_simulation():
     # Every identity's 90 days are written up-front, so the timeline is fixed
     # before any scoring and a re-run reproduces it exactly. Progress is
     # reported per identity as the generator walks the timeline.
-    def _trace_progress(done, total, n_events):
-        _init_stage(4, f"{done} / {total} identities · {n_events:,} events",
+    def _trace_progress(done, total, day, days, n_events, user):
+        # Show which identity and which of its 90 days is being written, so the
+        # stage reads as work in progress rather than a single number.
+        _init_stage(4,
+                    f"{user.user_id} ({user.role}) · day {day}/{days} · {n_events:,} events",
                     users_done=done, users_total=total, events=n_events)
+        if day == days and done % 10 == 0:
+            _init_log(f"trace: {done}/{total} identities written ({n_events:,} events)")
 
     _init_stage(4, f"Writing {DASHBOARD_DAYS} days for {n} identities",
                 users_done=0, users_total=n, events=0)

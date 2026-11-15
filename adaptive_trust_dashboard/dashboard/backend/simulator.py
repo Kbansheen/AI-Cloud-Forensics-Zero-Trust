@@ -401,10 +401,14 @@ class CloudTrailSimulator:
     def generate_full_trace(self, days: int = 30, progress_cb=None) -> list[CloudTrailEvent]:
         """Build the whole timeline.
 
-        progress_cb(done_users, total_users, events_so_far) is called after each
-        identity finishes its days. It only observes — nothing about the random
-        stream or the resulting events changes, so a run with and without the
-        callback produces byte-identical output (verified by hashing the trace).
+        progress_cb(done_users, total_users, day, days, events_so_far, user) is
+        called after EVERY simulated day, not just every identity — the 50-user
+        run is 4,500 steps, so the dashboard has something to show throughout
+        instead of one tick per identity.
+
+        It only observes: the random stream and the resulting events are
+        untouched, so a run with and without the callback produces byte-identical
+        output (verified by hashing the trace both ways).
         """
         all_events  = []
         start       = datetime(2024, 1, 15, 0, 0, 0)
@@ -428,8 +432,9 @@ class CloudTrailSimulator:
                         all_events.append(self._attack_event(user, ts))
                     else:
                         all_events.append(self._normal_event(user, ts))
-            if progress_cb is not None:
-                progress_cb(done, total_users, len(all_events))
+                if progress_cb is not None:
+                    progress_cb(done, total_users, day + 1, days,
+                                len(all_events), user)
 
         all_events.sort(key=lambda e: e.timestamp)
         return all_events
