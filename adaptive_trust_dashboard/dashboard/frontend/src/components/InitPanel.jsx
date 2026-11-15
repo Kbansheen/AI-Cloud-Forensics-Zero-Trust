@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { EventJSON } from './TraceViewer'
 
 /**
  * Shown in place of the identity grid when no identities exist yet.
@@ -197,6 +198,17 @@ export default function InitPanel({ onInit }) {
           )
         })}
       </div>
+
+      {/* ── the actual record being written, during stage 4 ─────────────── */}
+      {p?.last_event && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontFamily: C.mono, fontSize: 9.5, color: C.sec,
+                        letterSpacing: '.07em', marginBottom: 5 }}>
+            JUST WRITTEN TO THE TRACE
+          </div>
+          <EventJSON ev={p.last_event} />
+        </div>
+      )}
 
       {/* ── real events per role, once known ───────────────────────────── */}
       {p?.real_per_role && Object.keys(p.real_per_role).length > 0 && (

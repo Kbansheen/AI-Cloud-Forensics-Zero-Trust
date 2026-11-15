@@ -7,6 +7,7 @@ import AlertsExplorer from './components/AlertsExplorer'
 import ControlPanel from './components/ControlPanel'
 import ComparisonPanel from './components/ComparisonPanel'
 import BaselineScorecard from './components/BaselineScorecard'
+import TraceViewer from './components/TraceViewer'
 import GuidedTour, { TOUR_STEPS } from './components/GuidedTour'
 
 const API = ''
@@ -358,6 +359,7 @@ export default function App() {
             ) : (
               <div style={{ overflowY:'auto', height:'100%' }}>
                 <ComparisonPanel results={comparison} running={status.comparison_running} log={comparisonLog}/>
+                {status.is_initialised && <TraceViewer title="SIMULATED CLOUDTRAIL TRACE · the events being scored"/>}
                 {!comparison && !status.comparison_running && (
                   <div style={{ padding:'30px', textAlign:'center', color:'var(--text-dim)', fontFamily:'var(--font-mono)', fontSize:11 }}>
                     Click "Run Analysis" in the left panel to generate the comparison report

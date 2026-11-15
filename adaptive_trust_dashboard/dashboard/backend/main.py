@@ -379,12 +379,20 @@ def _build_simulation():
     # Every identity's 90 days are written up-front, so the timeline is fixed
     # before any scoring and a re-run reproduces it exactly. Progress is
     # reported per identity as the generator walks the timeline.
-    def _trace_progress(done, total, day, days, n_events, user):
+    def _trace_progress(done, total, day, days, n_events, user, last_event=None):
         # Show which identity and which of its 90 days is being written, so the
-        # stage reads as work in progress rather than a single number.
+        # stage reads as work in progress rather than a single number. The last
+        # event written is passed through so the dashboard can display the
+        # actual CloudTrail record as it is produced.
+        extra = {}
+        if last_event is not None:
+            try:
+                extra["last_event"] = _compact_event(last_event.to_cloudtrail_dict())
+            except Exception:
+                pass
         _init_stage(4,
                     f"{user.user_id} ({user.role}) · day {day}/{days} · {n_events:,} events",
-                    users_done=done, users_total=total, events=n_events)
+                    users_done=done, users_total=total, events=n_events, **extra)
         if day == days and done % 10 == 0:
             _init_log(f"trace: {done}/{total} identities written ({n_events:,} events)")
 
@@ -432,6 +440,31 @@ def _build_simulation():
 def init_progress():
     """Live initialisation status, polled by the dashboard's init screen."""
     return state.init_progress
+
+
+@app.get("/api/trace/sample")
+def trace_sample(offset: int = 0, limit: int = 5, only: str = "all"):
+    """Page through the generated CloudTrail trace.
+
+    only = "all" | "attack" | "benign"
+    Returns compact records (the fields a reader cares about) plus totals, so the
+    dashboard can show what the simulation actually produced and in what format.
+    """
+    evs = state.all_events
+    if only == "attack":
+        evs = [e for e in evs if e.get("is_attack")]
+    elif only == "benign":
+        evs = [e for e in evs if not e.get("is_attack")]
+    limit = max(1, min(50, limit))
+    offset = max(0, min(offset, max(0, len(evs) - 1)))
+    page = evs[offset:offset + limit]
+    return {
+        "total":   len(evs),
+        "offset":  offset,
+        "limit":   limit,
+        "events":  [_compact_event(e) for e in page],
+        "raw_first": page[0] if page else None,
+    }
 
 
 @app.post("/api/simulation/init")
@@ -936,6 +969,22 @@ def _ttd_block() -> dict:
         "median_ttd_min":   lat["median_min"],
         "ttd_per_scenario": lat["per_sc"],
         "ttd_n":            lat["n"],
+    }
+
+
+def _compact_event(ev: dict) -> dict:
+    """The CloudTrail fields worth showing on screen, keeping the real shape."""
+    ident = ev.get("userIdentity") or {}
+    return {
+        "eventTime":      ev.get("eventTime"),
+        "eventSource":    ev.get("eventSource"),
+        "eventName":      ev.get("eventName"),
+        "userName":       ident.get("userName"),
+        "sourceIPAddress": ev.get("sourceIPAddress"),
+        "awsRegion":      ev.get("awsRegion"),
+        "readOnly":       ev.get("readOnly"),
+        "eventID":        ev.get("eventID"),
+        "userAgent":      ev.get("userAgent"),
     }
 
 

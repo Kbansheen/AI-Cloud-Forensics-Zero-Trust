@@ -434,7 +434,8 @@ class CloudTrailSimulator:
                         all_events.append(self._normal_event(user, ts))
                 if progress_cb is not None:
                     progress_cb(done, total_users, day + 1, days,
-                                len(all_events), user)
+                                len(all_events), user,
+                                all_events[-1] if all_events else None)
 
         all_events.sort(key=lambda e: e.timestamp)
         return all_events
