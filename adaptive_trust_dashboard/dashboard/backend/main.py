@@ -33,7 +33,7 @@ from feature_encoder import (
 from anomaly_scorer import AnomalyScorer
 from trust_engine import TrustEngineManager
 from adversary import AdversaryConfig
-from comparison import run_comparison
+from comparison import run_comparison, SCENARIO_LABELS
 from cloudtrail_loader import load_cloudtrail_directory, load_cloudtrail_records
 
 
@@ -440,6 +440,72 @@ def _build_simulation():
 def init_progress():
     """Live initialisation status, polled by the dashboard's init screen."""
     return state.init_progress
+
+
+@app.get("/api/campaigns")
+def campaigns():
+    """Per-campaign breakdown of the injected attacks.
+
+    One entry per MITRE technique: who was attacked, how many malicious events
+    it produced, when it started and ended, when the identity was restricted,
+    and how many of its events fell inside that detection window. This is the
+    detail behind the '7 / 8, median N min' tile — it existed only inside the
+    engine until now.
+    """
+    def _t(ev):
+        raw = ev.get("eventTime") or ev.get("timestamp") or ""
+        try:
+            return datetime.strptime(str(raw).replace("Z", "")[:19], "%Y-%m-%dT%H:%M:%S")
+        except Exception:
+            return None
+
+    by_sc = {}
+    for ev in state.all_events:
+        sc = ev.get("attack_scenario")
+        if sc and ev.get("is_attack"):
+            by_sc.setdefault(sc, []).append(ev)
+
+    out = []
+    for sc, evs in by_sc.items():
+        evs = sorted(evs, key=lambda e: e.get("eventTime") or "")
+        label, tactic = SCENARIO_LABELS.get(sc, (sc, ""))
+        first, last = _t(evs[0]), _t(evs[-1])
+        det_idx = state.scenario_detect.get(sc)
+        det_t   = _t(state.all_events[det_idx]) if det_idx is not None else None
+        latency = round((det_t - first).total_seconds() / 60, 1) if (first and det_t) else None
+
+        # How many malicious events occurred inside the detection window — the
+        # "2 events in the first 8 minutes" figure.
+        in_window = None
+        if first and (det_t or det_idx is None) and latency is not None:
+            in_window = sum(
+                1 for e in evs
+                if _t(e) is not None and (_t(e) - first).total_seconds() <= latency * 60
+            )
+
+        ident = (evs[0].get("userIdentity") or {})
+        actions = sorted({e.get("eventName") for e in evs if e.get("eventName")})
+        out.append({
+            "scenario":        sc,
+            "label":           label,
+            "tactic":          tactic,
+            "victim":          ident.get("userName"),
+            "role":            evs[0].get("role"),
+            "n_events":        len(evs),
+            "actions":         actions[:6],
+            "first_attack":    evs[0].get("eventTime"),
+            "last_attack":     evs[-1].get("eventTime"),
+            "span_hours":      round((last - first).total_seconds() / 3600, 2) if (first and last) else None,
+            "detected":        det_idx is not None,
+            "restricted_at":   state.all_events[det_idx].get("eventTime") if det_idx is not None else None,
+            "latency_min":     latency,
+            "events_in_window": in_window,
+            "days_spanned":    len({(e.get("eventTime") or "")[:10] for e in evs}),
+        })
+
+    out.sort(key=lambda r: (r["latency_min"] is None, r["latency_min"] or 0))
+    return {"campaigns": out, "total": len(out),
+            "detected": sum(1 for r in out if r["detected"])}
 
 
 @app.get("/api/trace/sample")

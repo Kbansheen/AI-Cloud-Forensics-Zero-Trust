@@ -9,6 +9,7 @@ import ComparisonPanel from './components/ComparisonPanel'
 import BaselineScorecard from './components/BaselineScorecard'
 import TraceViewer from './components/TraceViewer'
 import ErrorBoundary from './components/ErrorBoundary'
+import CampaignPanel from './components/CampaignPanel'
 import GuidedTour, { TOUR_STEPS } from './components/GuidedTour'
 
 const API = ''
@@ -275,6 +276,7 @@ export default function App() {
         <div data-tour="view-toggle" style={{ display:'flex', gap:4 }}>
           {[
             { id:'grid',       label:'Live Monitor' },
+            { id:'campaigns',  label:'Attack Campaigns' },
             { id:'comparison', label:'Analysis Report' },
             { id:'scorecard',  label:'Baseline vs Adaptive' },
             { id:'trace',      label:'Event Trace' },
@@ -359,6 +361,12 @@ export default function App() {
                     Analysis running — see Analysis Report tab for live progress
                   </div>
                 )}
+              </div>
+            ) : centreView === 'campaigns' ? (
+              <div style={{ overflowY:'auto', height:'100%' }}>
+                <ErrorBoundary label="Attack Campaigns">
+                  <CampaignPanel/>
+                </ErrorBoundary>
               </div>
             ) : centreView === 'trace' ? (
               <div style={{ overflowY:'auto', height:'100%', padding:'14px' }}>
