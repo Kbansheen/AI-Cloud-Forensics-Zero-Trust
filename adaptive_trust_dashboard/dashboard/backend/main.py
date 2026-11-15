@@ -261,9 +261,34 @@ INIT_STAGES = [
 ]
 
 
+# Some stages are effectively instantaneous (registering 50 identities takes a
+# few milliseconds; placing 8 campaigns takes under one). Without a floor, the
+# dashboard's 500 ms poll never observes them at all: the stage goes straight
+# from "not started" to "done" and the user sees nothing happen. Each stage is
+# therefore held for at least this long before the next one begins. It costs
+# roughly 0.6 s across the whole initialisation and makes the sequence legible.
+INIT_MIN_STAGE_S = 0.30
+
+
 def _init_stage(idx: int, detail: str = "", **extra):
     """Publish init progress. Called from the worker thread; plain dict writes."""
     p = state.init_progress
+    prev = p.get("stage") or 0
+    now  = time.time()
+
+    # Record how long the stage we are LEAVING actually took, and hold it on
+    # screen long enough to be seen.
+    if prev and idx != prev:
+        t0 = p.get("_stage_t0") or now
+        dur = now - t0
+        p.setdefault("stage_times", {})[str(prev)] = round(dur, 2)
+        _init_log(f"stage {prev} done in {dur:.2f}s")
+        if dur < INIT_MIN_STAGE_S:
+            time.sleep(INIT_MIN_STAGE_S - dur)
+
+    if idx != prev:
+        p["_stage_t0"] = time.time()
+
     p.update({
         "stage":       idx,
         "stage_label": INIT_STAGES[idx - 1] if 1 <= idx <= len(INIT_STAGES) else "",
@@ -381,6 +406,16 @@ def _build_simulation():
     _init_stage(5, f"{len(state.scenario_start)} attack scenarios placed",
                 scenarios={k: int(v / 24) for k, v in state.scenario_start.items()})
 
+    # Hold the last stage briefly too, otherwise it appears and is replaced by
+    # the identity grid in the same frame.
+    t0 = state.init_progress.get("_stage_t0")
+    if t0:
+        left = INIT_MIN_STAGE_S - (time.time() - t0)
+        if left > 0:
+            time.sleep(left)
+    state.init_progress.setdefault("stage_times", {})["5"] = round(
+        time.time() - (t0 or time.time()), 2)
+
     state.is_initialised = True
     print(f"[INIT] Ready: {len(state.sim.users)} users, "
           f"{len(state.all_events)} events, "
@@ -403,7 +438,8 @@ async def init_simulation():
     p.update({"running": True, "done": False, "failed": None, "stage": 0,
               "stage_label": "Starting", "detail": "", "users_done": 0,
               "users_total": 0, "events": 0, "real_events": 0, "real_per_role": {},
-              "scenarios": {}, "log": [], "started_at": time.time(), "elapsed_s": 0.0})
+              "scenarios": {}, "log": [], "started_at": time.time(), "elapsed_s": 0.0,
+              "stage_times": {}, "_stage_t0": None})
     try:
         # Worker thread: the loop stays free so /api/init-progress keeps
         # answering while the forests are training.

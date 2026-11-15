@@ -169,6 +169,15 @@ export default function InitPanel({ onInit }) {
                       {Object.keys(p.scenarios).length} campaigns
                     </span>
                   )}
+                  {/* how long the stage actually took, once finished */}
+                  {st === 'done' && p?.stage_times?.[String(s.n)] != null && (
+                    <span style={{ fontFamily: C.mono, fontSize: 10.5, color: C.hint,
+                                   opacity: 0.75 }}>
+                      {p.stage_times[String(s.n)] < 0.05
+                        ? '<0.1s'
+                        : `${p.stage_times[String(s.n)].toFixed(1)}s`}
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontFamily: C.mono, fontSize: 10.5, color: C.hint,
                               marginTop: 2, lineHeight: 1.45 }}>
