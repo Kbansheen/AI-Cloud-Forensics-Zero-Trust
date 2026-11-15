@@ -276,6 +276,7 @@ export default function App() {
             { id:'grid',       label:'Live Monitor' },
             { id:'comparison', label:'Analysis Report' },
             { id:'scorecard',  label:'Baseline vs Adaptive' },
+            { id:'trace',      label:'Event Trace' },
           ].map(v => (
             <button key={v.id} onClick={() => setCentreView(v.id)} style={{
               padding:'4px 12px', fontSize:10, fontFamily:'var(--font-mono)',
@@ -356,10 +357,21 @@ export default function App() {
                   </div>
                 )}
               </div>
+            ) : centreView === 'trace' ? (
+              <div style={{ overflowY:'auto', height:'100%', padding:'14px' }}>
+                {status.is_initialised ? (
+                  <TraceViewer title="SIMULATED CLOUDTRAIL TRACE · the events that are scored"
+                               full/>
+                ) : (
+                  <div style={{ padding:'30px', textAlign:'center', color:'#8ea3c0',
+                                fontFamily:'var(--font-mono)', fontSize:11 }}>
+                    Initialise the simulation first — the trace is generated in stage 4
+                  </div>
+                )}
+              </div>
             ) : (
               <div style={{ overflowY:'auto', height:'100%' }}>
                 <ComparisonPanel results={comparison} running={status.comparison_running} log={comparisonLog}/>
-                {status.is_initialised && <TraceViewer title="SIMULATED CLOUDTRAIL TRACE · the events being scored"/>}
                 {!comparison && !status.comparison_running && (
                   <div style={{ padding:'30px', textAlign:'center', color:'var(--text-dim)', fontFamily:'var(--font-mono)', fontSize:11 }}>
                     Click "Run Analysis" in the left panel to generate the comparison report

@@ -62,14 +62,18 @@ export function EventJSON({ ev }) {
     <pre style={{
       fontFamily: C.mono, fontSize: 9.5, lineHeight: 1.5, color: C.sec,
       background: C.surface, border: `1px solid ${C.border}`, borderRadius: 4,
-      padding: '8px 10px', margin: 0, overflowX: 'auto', maxHeight: 240,
+      padding: '8px 10px', margin: 0, overflowX: 'auto',
+      maxHeight: full ? 520 : 240,
     }}>
       {JSON.stringify(ev, null, 2)}
     </pre>
   )
 }
 
-export default function TraceViewer({ title = 'EVENT TRACE', defaultOnly = 'all' }) {
+export default function TraceViewer({ title = 'EVENT TRACE', defaultOnly = 'all', full = false }) {
+  // full = rendered as its own tab rather than an inset panel: more rows per
+  // page, taller JSON pane.
+  const PAGE = full ? 20 : 6
   const [data, setData] = useState(null)
   const [offset, setOffset] = useState(0)
   const [only, setOnly] = useState(defaultOnly)
@@ -78,12 +82,12 @@ export default function TraceViewer({ title = 'EVENT TRACE', defaultOnly = 'all'
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/trace/sample?offset=${offset}&limit=6&only=${only}`)
+      const r = await fetch(`/api/trace/sample?offset=${offset}&limit=${PAGE}&only=${only}`)
       if (!r.ok) throw new Error(`HTTP ${r.status}`)
       setData(await r.json())
       setErr(null)
     } catch (e) { setErr(e.message) }
-  }, [offset, only])
+  }, [offset, only, PAGE])
 
   useEffect(() => { load() }, [load])
 
@@ -102,7 +106,7 @@ export default function TraceViewer({ title = 'EVENT TRACE', defaultOnly = 'all'
                   padding: '10px 12px', marginTop: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8,
                     flexWrap: 'wrap' }}>
-        <span style={{ fontFamily: C.mono, fontSize: 10, color: C.sec,
+        <span style={{ fontFamily: C.mono, fontSize: full ? 11.5 : 10, color: C.sec,
                        letterSpacing: '.07em' }}>{title}</span>
         <span style={{ fontFamily: C.mono, fontSize: 9.5, color: C.hint }}>
           {data ? `${data.total.toLocaleString()} events` : '…'}
@@ -142,8 +146,8 @@ export default function TraceViewer({ title = 'EVENT TRACE', defaultOnly = 'all'
           showing {data ? `${data.offset + 1}–${Math.min(data.offset + data.limit, data.total)}` : '—'}
         </span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 5 }}>
-          {btn('‹ prev', () => setOffset(Math.max(0, offset - 6)), false)}
-          {btn('next ›', () => setOffset(offset + 6), false)}
+          {btn('‹ prev', () => setOffset(Math.max(0, offset - PAGE)), false)}
+          {btn('next ›', () => setOffset(offset + PAGE), false)}
         </div>
       </div>
     </div>
