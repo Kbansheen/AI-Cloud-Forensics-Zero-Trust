@@ -136,9 +136,9 @@ export default function BaselineScorecard({ results, realLogCount }) {
       </div>
 
       <div style={{ fontSize: 9, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', lineHeight: 1.6 }}>
-        A/B/C figures are live from the most recent Run Analysis pass (n_users=20, days=30 — statistically equivalent to
-        the full Paper 1 50-user/90-day run). A is the unattacked Paper 1 reference point; B shows the pacing adversary
-        exploiting fixed λ/ρ; C is the Paper 2 UCB-adaptive result under identical attack pressure.
+        A/B/C figures are live from the most recent Run Analysis pass at the same scale as the Paper 1 run
+        (50 identities / 90 days, seed 42). A is the unattacked Paper 1 reference point; B shows the pacing
+        adversary exploiting fixed λ/ρ; C is the Paper 2 UCB-adaptive result under identical attack pressure.
       </div>
     </div>
   )

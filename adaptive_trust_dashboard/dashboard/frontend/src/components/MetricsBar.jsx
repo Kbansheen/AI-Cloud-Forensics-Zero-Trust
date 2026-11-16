@@ -8,7 +8,7 @@ import React from 'react'
 // Mixing them on one screen without saying which is which reads as a contradiction.
 const METRICS = [
   { key:'auc',               label:'AUC (event)',        fmt:v=>v?.toFixed(3)??'—',       note:'Paper 1 baseline: 0.65' },
-  { key:'fpr',               label:'FPR (score ≥ 0.55)', fmt:v=>v?.toFixed(4)??'—',       note:'event-level rate' },
+  { key:'fpr',               label:'FPR (score ≥ 0.55)', fmt:v=>v?.toFixed(4)??'—',       note:'event-level · not the per-10K table' },
   { key:'precision',         label:'Precision (≥ 0.55)', fmt:v=>v?.toFixed(3)??'—',       note:'event-level' },
   { key:'scenarios_detected',label:'Scenarios',          fmt:v=>`${v??'—'} / 8`,
     // Second line: how fast the caught campaigns were caught. Median over the

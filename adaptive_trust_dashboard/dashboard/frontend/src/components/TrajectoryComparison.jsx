@@ -43,6 +43,35 @@ export default function TrajectoryComparison({ trajectories }) {
   const xScale = idx   => PAD_L + ((idx - minIdx) / span) * (CHART_W - PAD_L - PAD_R)
   const yScale = trust => PAD_T + (1 - trust) * (CHART_H - PAD_T - PAD_B)
 
+  // Measured comparison of the two curves on the selected scenario.
+  const verdict = useMemo(() => {
+    const st = (data.static   || []).map(p => p.trust)
+    const ad = (data.adaptive || []).map(p => p.trust)
+    if (!st.length || !ad.length) {
+      return { staticText:'—', adaptiveText:'—', detail:'No curve data for this scenario.' }
+    }
+    const frac = (a, t) => a.filter(x => x < t).length / a.length
+    const mean = a => a.reduce((s, x) => s + x, 0) / a.length
+    const stBelow = frac(st, THRESH_RO), adBelow = frac(ad, THRESH_RO)
+    const stDeep  = frac(st, THRESH_QUAR), adDeep = frac(ad, THRESH_QUAR)
+    const improved = adBelow < stBelow - 0.005          // worth calling an improvement
+    const worse    = adBelow > stBelow + 0.005
+    return {
+      staticText:   `below ${THRESH_RO} on ${(stBelow*100).toFixed(1)}% of events`,
+      adaptiveText: `below ${THRESH_RO} on ${(adBelow*100).toFixed(1)}% of events`,
+      detail: (improved
+          ? `Adaptive keeps this identity above the ${THRESH_RO} boundary more of the time`
+          : worse
+            ? `Adaptive is slightly worse on this scenario`
+            : `Essentially no difference on this scenario (within 0.5 pts)`)
+        + `; mean trust ${mean(st).toFixed(3)} → ${mean(ad).toFixed(3)}, `
+        + `time below ${THRESH_QUAR} ${(stDeep*100).toFixed(1)}% → ${(adDeep*100).toFixed(1)}%. `
+        + (Math.max(stBelow, adBelow) > 0
+            ? `Neither curve stays above the boundary for the whole campaign.`
+            : `Both curves stay above the boundary throughout.`),
+    }
+  }, [data])
+
   const staticPath   = buildPath(data.static, xScale, yScale)
   const adaptivePath = buildPath(data.adaptive, xScale, yScale)
   const attackX = data.attack_start_idx != null ? xScale(data.attack_start_idx) : null
@@ -117,10 +146,16 @@ export default function TrajectoryComparison({ trajectories }) {
               fontFamily="var(--font-mono)" textAnchor="middle">Event index</text>
       </svg>
 
-      {/* Legend */}
+      {/* Legend. The verdict is measured from this scenario's own curve, not
+          asserted: adaptive does NOT pin trust up, it still dips below the
+          boundary, so calling it "holds" overstates the result on scenarios
+          where the two curves are a wash. */}
       <div style={{ display:'flex', gap:16, marginTop:8, fontFamily:'var(--font-mono)', fontSize:9, color:'var(--text-sec)' }}>
-        <span><span style={{ color: STATIC_COLOR, fontWeight:700 }}>▬</span> Static λ/ρ (Condition B) — exploitable</span>
-        <span><span style={{ color: ADAPTIVE_COLOR, fontWeight:700 }}>▬</span> Adaptive UCB (Condition C) — holds</span>
+        <span><span style={{ color: STATIC_COLOR, fontWeight:700 }}>▬</span> Static λ/ρ (Condition B) — {verdict.staticText}</span>
+        <span><span style={{ color: ADAPTIVE_COLOR, fontWeight:700 }}>▬</span> Adaptive UCB (Condition C) — {verdict.adaptiveText}</span>
+      </div>
+      <div style={{ marginTop:6, fontFamily:'var(--font-mono)', fontSize:9, color:'var(--text-dim)', lineHeight:1.6 }}>
+        {verdict.detail}
       </div>
     </div>
   )
