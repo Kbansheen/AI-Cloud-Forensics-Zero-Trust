@@ -129,7 +129,9 @@ export function exportComparisonPDF(results, { realLogCount } = {}) {
   doc.setFontSize(7)
   doc.setTextColor(130)
   doc.text(
-    'A/B/C figures are from the most recent Run Analysis pass (n_users=20, days=30 \u2014 statistically equivalent to the full Paper 1 50-user/90-day run).',
+    'A/B/C figures are from the most recent Run Analysis pass, at the same scale as the Paper 1 run '
+    + '(50 identities / 90 days, seed 42). Condition A is the unattacked Paper 1 reference point; B applies the '
+    + 'pacing adversary to fixed \u03bb/\u03c1; C applies the UCB-adaptive parameters under identical attack pressure.',
     margin, pageH - 24, { maxWidth: pageWidth - margin * 2 },
   )
 
