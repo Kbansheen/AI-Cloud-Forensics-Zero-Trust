@@ -1136,6 +1136,11 @@ def _compact_event(ev: dict) -> dict:
         "readOnly":       ev.get("readOnly"),
         "eventID":        ev.get("eventID"),
         "userAgent":      ev.get("userAgent"),
+        # Ground truth from the simulator, so the trace can label an injected
+        # attack rather than leaving the reader to infer it from the IP or the
+        # user agent. Null on benign events.
+        "is_attack":       ev.get("is_attack", False),
+        "attack_scenario": ev.get("attack_scenario"),
     }
 
 

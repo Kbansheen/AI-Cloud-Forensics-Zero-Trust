@@ -18,6 +18,30 @@ const C = {
   green: 'var(--z-green)', red: 'var(--z-red)', yellow: 'var(--z-yellow)',
 }
 
+const MITE = {
+  credential_access: 'T1606', collection: 'T1119', defense_evasion: 'T1036',
+  lateral_movement: 'T1530', data_exfiltration: 'T1048',
+  privilege_escalation: 'T1068', persistence: 'T1098', discovery: 'T1087',
+}
+
+/** Ground-truth label from the simulator — not a detector judgement. */
+const AttackTag = ({ ev }) => {
+  if (!ev || ev.is_attack !== true) {
+    return <span style={{ fontFamily: C.mono, fontSize: 9, color: C.hint }}>—</span>
+  }
+  const tech = MITE[ev.attack_scenario] || ev.attack_scenario || ''
+  return (
+    <span title="Injected attack event (simulator ground truth)"
+      style={{
+        fontFamily: C.mono, fontSize: 9, fontWeight: 700, letterSpacing: '.05em',
+        color: C.red, background: '#ef44441f', border: '1px solid #ef444466',
+        borderRadius: 3, padding: '1px 5px', whiteSpace: 'nowrap',
+      }}>
+      ATTACK{tech ? ` · ${tech}` : ''}
+    </span>
+  )
+}
+
 const FIELD = (label, value, colour) => (
   <div style={{ display: 'flex', gap: 6, minWidth: 0 }}>
     <span style={{ fontFamily: C.mono, fontSize: 9, color: C.hint, width: 66, flexShrink: 0,
@@ -29,9 +53,8 @@ const FIELD = (label, value, colour) => (
 
 /** One event as a compact row of fields. */
 export function EventRow({ ev, idx }) {
-  const attack = ev.eventName && (ev.readOnly === false || ev.__attack)
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '150px 150px 1fr 130px 110px',
+    <div style={{ display: 'grid', gridTemplateColumns: '150px 108px 1fr 130px 74px 100px',
                   gap: 10, padding: '4px 8px', borderBottom: `1px solid ${C.border}`,
                   background: idx % 2 ? 'transparent' : '#ffffff05' }}>
       <span style={{ fontFamily: C.mono, fontSize: 10, color: C.hint }}>
@@ -51,6 +74,7 @@ export function EventRow({ ev, idx }) {
                      color: ev.readOnly ? C.green : C.yellow }}>
         {ev.readOnly ? 'read-only' : 'write'}
       </span>
+      <AttackTag ev={ev} />
     </div>
   )
 }
@@ -127,10 +151,10 @@ export default function TraceViewer({ title = 'EVENT TRACE', defaultOnly = 'all'
 
       {data && !showJson && (
         <div style={{ border: `1px solid ${C.border}`, borderRadius: 4, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '150px 150px 1fr 130px 110px',
+          <div style={{ display: 'grid', gridTemplateColumns: '150px 108px 1fr 130px 74px 100px',
                         gap: 10, padding: '4px 8px', background: C.surface,
                         borderBottom: `1px solid ${C.border}` }}>
-            {['timestamp', 'identity', 'api call', 'source ip', 'access'].map(h => (
+            {['timestamp', 'identity', 'api call', 'source ip', 'access', 'label'].map(h => (
               <span key={h} style={{ fontFamily: C.mono, fontSize: 8.5, color: C.hint,
                                      letterSpacing: '.06em', textTransform: 'uppercase' }}>{h}</span>
             ))}
