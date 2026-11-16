@@ -4,10 +4,51 @@ const ZONE_SHORT = {
   normal_access: 'NORMAL', step_up_mfa: 'MFA', read_only: 'READ-ONLY', quarantine: 'QUARANTINE',
 }
 
+const MITE = {
+  credential_access:      'T1606',
+  collection:             'T1119',
+  defense_evasion:        'T1036',
+  lateral_movement:       'T1530',
+  data_exfiltration:      'T1048',
+  privilege_escalation:   'T1068',
+  persistence:            'T1098',
+  discovery:              'T1087',
+}
+
 const ZONE_STYLE = {
   quarantine: { color: '#ef4444', label: 'QUARANTINE', icon: '⛔' },
   read_only:  { color: '#f97316', label: 'READ-ONLY',  icon: '🔒' },
   step_up_mfa:{ color: '#f59e0b', label: 'MFA',        icon: '🔐' },
+}
+
+/**
+ * Ground-truth badge: did this alert coincide with an injected attack event?
+ *
+ * This is the simulator's answer key, not the detector's opinion — the engine
+ * does not know is_attack when it decides. Shown because without it a real
+ * detection and a false alarm are visually identical on this feed.
+ */
+function AttackBadge({ alert }) {
+  const real = alert.is_attack === true
+  const colour = real ? '#ef4444' : '#64748b'
+  const label  = real ? 'REAL ATTACK' : 'FALSE ALARM'
+  const tech   = real && alert.attack_scenario
+    ? MITE[alert.attack_scenario] || alert.attack_scenario
+    : null
+  return (
+    <span title={real
+      ? 'This alert fired on an injected attack event (ground truth label)'
+      : 'This alert fired on ordinary traffic — a false positive (ground truth label)'}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 700,
+        letterSpacing: '.05em', padding: '2px 7px', borderRadius: 4,
+        color: colour, background: colour + '1f',
+        border: `1px solid ${colour}66`, whiteSpace: 'nowrap',
+      }}>
+      {label}{tech ? ` · ${tech}` : ''}
+    </span>
+  )
 }
 
 export function AlertCard({ alert, onExplain }) {
@@ -33,6 +74,7 @@ export function AlertCard({ alert, onExplain }) {
               {ZONE_SHORT[alert.zone_from] || alert.zone_from} → {ZONE_SHORT[alert.zone_to] || alert.zone_to}
             </span>
           )}
+          <AttackBadge alert={alert} />
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: 'var(--text-pri)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {alert.user_id}
           </span>

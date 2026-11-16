@@ -417,6 +417,11 @@ class TrustEngineManager:
                 "timestamp":    event.get("eventTime", event.get("timestamp", "")),
                 "event_idx":    event_idx,
                 "is_attack":    is_attack,
+                # Ground truth from the simulator, NOT a detector judgement:
+                # which MITRE technique injected this event, if any. The
+                # dashboard needs it to badge an alert as a real detection or
+                # a false alarm; without it the two look identical on screen.
+                "attack_scenario": event.get("attack_scenario"),
                 "persisted":    state.restricted_streak,
                 "lambda_":      round(lam, 3),
                 "rho":          round(rho, 3),
