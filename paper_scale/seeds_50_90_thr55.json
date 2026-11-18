@@ -1,0 +1,1210 @@
+{
+ "config": {
+  "users": 50,
+  "days": 90,
+  "seeds": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   42
+  ],
+  "json": "/tmp/comp_9seed.json"
+ },
+ "rows": [
+  {
+   "seed": 1,
+   "secs": 50.2,
+   "detA": 1.0,
+   "detB": 1.0,
+   "detC": 1.0,
+   "fprA": 52.54,
+   "fprB": 54.51,
+   "fprC": 16.48,
+   "fpr_red": 69.8,
+   "aucA": 0.9636,
+   "aucB": 0.8907,
+   "aucC": 0.9102
+  },
+  {
+   "seed": 2,
+   "secs": 49.4,
+   "detA": 1.0,
+   "detB": 1.0,
+   "detC": 1.0,
+   "fprA": 64.22,
+   "fprB": 69.42,
+   "fprC": 14.3,
+   "fpr_red": 79.4,
+   "aucA": 1.0,
+   "aucB": 0.9992,
+   "aucC": 0.9993
+  },
+  {
+   "seed": 3,
+   "secs": 50.4,
+   "detA": 1.0,
+   "detB": 0.875,
+   "detC": 1.0,
+   "fprA": 42.43,
+   "fprB": 45.29,
+   "fprC": 11.67,
+   "fpr_red": 74.2,
+   "aucA": 1.0,
+   "aucB": 0.9995,
+   "aucC": 0.9996
+  },
+  {
+   "seed": 4,
+   "secs": 49.6,
+   "detA": 1.0,
+   "detB": 1.0,
+   "detC": 1.0,
+   "fprA": 55.11,
+   "fprB": 53.35,
+   "fprC": 16.19,
+   "fpr_red": 69.7,
+   "aucA": 0.9414,
+   "aucB": 0.8299,
+   "aucC": 0.9001
+  },
+  {
+   "seed": 5,
+   "secs": 47.3,
+   "detA": 1.0,
+   "detB": 1.0,
+   "detC": 1.0,
+   "fprA": 58.98,
+   "fprB": 60.95,
+   "fprC": 13.23,
+   "fpr_red": 78.3,
+   "aucA": 0.9243,
+   "aucB": 0.8302,
+   "aucC": 0.8628
+  },
+  {
+   "seed": 6,
+   "secs": 46.6,
+   "detA": 0.875,
+   "detB": 0.875,
+   "detC": 0.875,
+   "fprA": 50.76,
+   "fprB": 51.75,
+   "fprC": 15.07,
+   "fpr_red": 70.9,
+   "aucA": 0.9622,
+   "aucB": 0.894,
+   "aucC": 0.9064
+  },
+  {
+   "seed": 7,
+   "secs": 47.2,
+   "detA": 1.0,
+   "detB": 1.0,
+   "detC": 0.875,
+   "fprA": 47.33,
+   "fprB": 46.31,
+   "fprC": 11.95,
+   "fpr_red": 74.2,
+   "aucA": 0.9642,
+   "aucB": 0.8369,
+   "aucC": 0.9124
+  },
+  {
+   "seed": 8,
+   "secs": 47.9,
+   "detA": 0.875,
+   "detB": 0.875,
+   "detC": 0.875,
+   "fprA": 46.34,
+   "fprB": 50.27,
+   "fprC": 11.73,
+   "fpr_red": 76.7,
+   "aucA": 0.9099,
+   "aucB": 0.744,
+   "aucC": 0.8019
+  },
+  {
+   "seed": 42,
+   "secs": 47.0,
+   "detA": 0.875,
+   "detB": 0.875,
+   "detC": 0.875,
+   "fprA": 49.24,
+   "fprB": 46.89,
+   "fprC": 14.15,
+   "fpr_red": 69.8,
+   "aucA": 0.9487,
+   "aucB": 0.8737,
+   "aucC": 0.9522
+  }
+ ],
+ "detail": {
+  "1": {
+   "table_detection": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    }
+   ],
+   "table_mttd": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 4.7
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 0.0,
+     "B": 9.15,
+     "C": 6.23
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 0.0,
+     "B": 3.58,
+     "C": 2.5
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 3.92
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 28.62,
+     "B": 47.68,
+     "C": 49.18
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 0.0,
+     "B": 2.73,
+     "C": 27.88
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 0.0,
+     "B": 1.4,
+     "C": 25.6
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 0.0,
+     "B": 24.58,
+     "C": 3.25
+    }
+   ]
+  },
+  "2": {
+   "table_detection": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    }
+   ],
+   "table_mttd": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 26.68
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 5.47
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 0.17,
+     "B": 5.32,
+     "C": 1.43
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 3.82
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 7.67
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 0.0,
+     "B": 24.82,
+     "C": 0.87
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 0.0
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 1.1,
+     "B": 1.95,
+     "C": 0.87
+    }
+   ]
+  },
+  "3": {
+   "table_detection": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 1,
+     "B": 0,
+     "C": 1
+    }
+   ],
+   "table_mttd": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 2.27,
+     "B": 25.32,
+     "C": 3.28
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 0.0
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 0.0,
+     "B": 3.45,
+     "C": 2.58
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 0.0,
+     "B": 0.77,
+     "C": 1.77
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 0.0,
+     "B": 8.6,
+     "C": 3.9
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 0.0,
+     "B": 1.42,
+     "C": 0.0
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 0.0,
+     "B": 28.78,
+     "C": 27.15
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 0.0,
+     "B": null,
+     "C": 23.98
+    }
+   ]
+  },
+  "4": {
+   "table_detection": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    }
+   ],
+   "table_mttd": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 0.0,
+     "B": 5.92,
+     "C": 0.0
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 0.07,
+     "B": 2.98,
+     "C": 24.9
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 0.0,
+     "B": 1.77,
+     "C": 3.27
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 4.4
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 45.95,
+     "B": 30.05,
+     "C": 48.63
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 0.0,
+     "B": 1.03,
+     "C": 0.87
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 2.08
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 4.47
+    }
+   ]
+  },
+  "5": {
+   "table_detection": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    }
+   ],
+   "table_mttd": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 0.0,
+     "B": 24.9,
+     "C": 4.17
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 5.05,
+     "B": 6.32,
+     "C": 3.93
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 1.03,
+     "B": 28.07,
+     "C": 2.12
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 2.02
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 48.62,
+     "B": 48.93,
+     "C": 79.3
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 0.0,
+     "B": 1.73,
+     "C": 26.88
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 0.0,
+     "B": 27.47,
+     "C": 25.33
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 1.17,
+     "B": 23.8,
+     "C": 5.87
+    }
+   ]
+  },
+  "6": {
+   "table_detection": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    }
+   ],
+   "table_mttd": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 0.0,
+     "B": 5.17,
+     "C": 0.35
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 0.63
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 0.0,
+     "B": 49.25,
+     "C": 21.85
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 5.33
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": null,
+     "B": null,
+     "C": null
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 2.28,
+     "B": 3.5,
+     "C": 9.85
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 2.75
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 1.12
+    }
+   ]
+  },
+  "7": {
+   "table_detection": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 1,
+     "B": 1,
+     "C": 0
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    }
+   ],
+   "table_mttd": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 2.32,
+     "B": 5.08,
+     "C": 25.05
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 0.45
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 0.72
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 0.57,
+     "B": 2.65,
+     "C": 2.58
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 1.92,
+     "B": 0.0,
+     "C": null
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 0.0,
+     "B": 24.12,
+     "C": 0.9
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 0.02,
+     "B": 27.28,
+     "C": 4.05
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 0.0,
+     "B": 1.3,
+     "C": 1.85
+    }
+   ]
+  },
+  "8": {
+   "table_detection": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    }
+   ],
+   "table_mttd": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 0.0,
+     "B": 26.67,
+     "C": 48.62
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 1.32
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 2.32
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 0.0,
+     "B": 27.22,
+     "C": 6.3
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": null,
+     "B": null,
+     "C": null
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 0.0,
+     "B": 25.55,
+     "C": 26.05
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 0.0,
+     "B": 4.32,
+     "C": 0.75
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 2.58,
+     "B": 2.77,
+     "C": 2.37
+    }
+   ]
+  },
+  "42": {
+   "table_detection": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    }
+   ],
+   "table_mttd": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 1.68,
+     "B": 5.62,
+     "C": 2.87
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 0.63,
+     "B": 2.62,
+     "C": 6.43
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 1.67
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 1.98,
+     "B": 4.25,
+     "C": 2.23
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": null,
+     "B": null,
+     "C": null
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 0.0,
+     "B": 3.48,
+     "C": 23.82
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 0.0,
+     "B": 2.1,
+     "C": 4.1
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 0.0,
+     "B": 1.92,
+     "C": 1.33
+    }
+   ]
+  }
+ }
+}

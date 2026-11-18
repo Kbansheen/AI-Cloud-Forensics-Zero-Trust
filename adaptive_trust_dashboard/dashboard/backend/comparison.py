@@ -12,11 +12,16 @@ Conditions:
   B — Fixed λ=0.15, ρ=0.05, pacing adversary      (shows vulnerability)
   C — UCB adaptive λ/ρ,     pacing adversary      (Paper 2 solution)
 
-n_users=20, days=30 is the interactive-dashboard default, chosen for runtime.
-NOTE: this is NOT the same dataset scale as Paper 1 (50 users / 90 days,
-165,345 events) — at 20/30 the trace is ~24,000 events, roughly 15% of that.
-Any results table must state which scale it was produced at; the two are not
-interchangeable and must not be presented as equivalent.
+The dashboard runs at Paper 1's own scale: main.py sets DASHBOARD_USERS = 50
+and DASHBOARD_DAYS = 90, so a dashboard Run Analysis and a run_paper_scale.py
+sweep produce directly comparable numbers. (An earlier revision defaulted to
+20/30, which yielded a ~24,000-event trace against Paper 1's 165,345 — about
+15%. Those two scales are not interchangeable and must never be presented as
+equivalent; anything produced at 20/30 is historical only.)
+
+Every published figure in this project is at 50 users / 90 days, evaluated at
+the restriction boundary ZONE_READ_ONLY = 0.55. Quote that boundary whenever
+quoting an FPR or detection rate, because both move with it.
 """
 
 from datetime import datetime

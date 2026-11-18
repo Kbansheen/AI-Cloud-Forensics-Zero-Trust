@@ -1,0 +1,146 @@
+{
+ "config": {
+  "users": 50,
+  "days": 90,
+  "seeds": [
+   42
+  ],
+  "json": "/tmp/comp_rerun.json"
+ },
+ "rows": [
+  {
+   "seed": 42,
+   "secs": 46.9,
+   "detA": 0.875,
+   "detB": 0.875,
+   "detC": 0.875,
+   "fprA": 49.24,
+   "fprB": 46.89,
+   "fprC": 14.15,
+   "fpr_red": 69.8,
+   "aucA": 0.9487,
+   "aucB": 0.8737,
+   "aucC": 0.9522
+  }
+ ],
+ "detail": {
+  "42": {
+   "table_detection": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": 0,
+     "B": 0,
+     "C": 0
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 1,
+     "B": 1,
+     "C": 1
+    }
+   ],
+   "table_mttd": [
+    {
+     "scenario": "Priv. Escalation",
+     "tactic": "T1068",
+     "A": 1.68,
+     "B": 5.62,
+     "C": 2.87
+    },
+    {
+     "scenario": "Data Exfiltration",
+     "tactic": "T1048",
+     "A": 0.63,
+     "B": 2.62,
+     "C": 6.43
+    },
+    {
+     "scenario": "Defense Evasion",
+     "tactic": "T1036",
+     "A": 0.0,
+     "B": 0.0,
+     "C": 1.67
+    },
+    {
+     "scenario": "Persistence",
+     "tactic": "T1098",
+     "A": 1.98,
+     "B": 4.25,
+     "C": 2.23
+    },
+    {
+     "scenario": "Discovery",
+     "tactic": "T1087",
+     "A": null,
+     "B": null,
+     "C": null
+    },
+    {
+     "scenario": "Collection",
+     "tactic": "T1119",
+     "A": 0.0,
+     "B": 3.48,
+     "C": 23.82
+    },
+    {
+     "scenario": "Credential Access",
+     "tactic": "T1606",
+     "A": 0.0,
+     "B": 2.1,
+     "C": 4.1
+    },
+    {
+     "scenario": "Lateral Movement",
+     "tactic": "T1530",
+     "A": 0.0,
+     "B": 1.92,
+     "C": 1.33
+    }
+   ]
+  }
+ }
+}
