@@ -235,7 +235,16 @@ An informed adversary who knows the decay ($\lambda = 0.15$) and recovery ($\rho
 ### 2. Reinforcement Learning via Multi-Armed Bandits
 To counter this pacing threat, our ongoing work implements a per-user **Upper Confidence Bound (UCB1) Multi-Armed Bandit** over a 14-arm stability-constrained parameter grid. 
 * By evaluating the outcomes of previous enforcement actions (rewarding successful detections and penalizing false alarms), the bandit adaptively optimizes the decay and recovery rates ($\lambda, \rho$) per user.
-* Against the pacing adversary, this adaptive learning **recovers detection speeds to under 2 hours** and slashes the False Positive Rate by **50.2%** ($110.85 \rightarrow 55.19$ per 10k events).
+* Against the pacing adversary, this adaptive learning **preserves detection coverage while cutting false positives by roughly 70%**. Measured over 9 seeds at 50 identities / 90 days, at the deployed restriction boundary of $T < 0.55$:
+
+  | Metric | B — static λ/ρ + adversary | C — UCB adaptive + adversary |
+  |---|---|---|
+  | False positives / 10,000 benign events | 53.19 ± 7.79 | **13.86 ± 1.85** (−73.7% ± 3.8%) |
+  | Precision (seed 42) | 0.94% | **7.27%** |
+  | Detection rate (8 scenarios) | 0.944 ± 0.066 | 0.944 ± 0.066 |
+  | AUC (event-level) | 0.878 ± 0.082 | 0.916 ± 0.063 |
+
+  Adaptive AUC exceeds the attacked static baseline in **9 of 9 seeds**, but does not recover the unattacked baseline (A, 0.957 ± 0.030). On median time-to-detect it is marginally slower — 2.62 h under static versus 2.87 h under adaptive, a **15-minute cost** — and faster in 3 of the 7 detected scenarios. In short, the bandit buys a large reduction in alert noise at near-zero cost to detection speed, rather than a speed-up.
 
 ### 3. The Full-Stack Monitoring UI
 To make this deployable in a real-world Security Operations Center (SOC), we are actively building a full-stack, real-time visualization dashboard:
